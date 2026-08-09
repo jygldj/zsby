@@ -4,11 +4,16 @@
 
 > 本系统原为"道玄文集"网站（`F:\github-dx\wx\`）的六爻子系统，现已独立为仓库 **`jygldj/zsby`**，自包含运行，不依赖文集仓库。代码按"结构 / 数据 / 算法 / 主控 / 样式"五层拆分于 `ly/`，后端 AI 代理置于仓根 `functions/api/`（Cloudflare Pages 约定：函数目录须在仓库根）。
 
-## 目录结构（本仓库根目录 F:\github-dx\zsby\，已独立运行）
+## 一、目录结构（本仓库根目录 F:\github-dx\zsby\，已独立运行）
+
+> 维护要点：静态页面在仓根；排盘逻辑按"结构 / 数据 / 算法 / 主控 / 样式"五层拆分于 `ly/`；后端 AI 代理须在仓根 `functions/api/`（Cloudflare Pages 约定：函数目录须在仓库根）。
 
 ```
 F:\github-dx\zsby\                              # 增删卜易独立仓库根（Cloudflare Pages 项目根）
-├── index.html           # 子系统门户（导航至下列各页）
+├── .gitignore           # Git 忽略规则
+├── README.md            # 本文件
+├── 测试仓库.txt         # 仓库初始化占位文件（零字节，保留）
+├── index.html           # 子系统门户（导航至下列各页；卡片装入系统风格容器）
 ├── jiegou.html          # 【起卦】主页面（结构层）：铜钱摇卦 + 手动输卦双模式 + 八宫纳甲排盘
 │                        #         仅含 DOM 容器与交互按钮，逻辑全部委托给 ly/ 模块
 ├── jiegua.html          # 【释卦】AI 解读页面（含可编辑"求卦者信息"区，解决传输不稳定）
@@ -23,14 +28,12 @@ F:\github-dx\zsby\                              # 增删卜易独立仓库根（
 │   └── yangshi.css      # 【样式层】古风排版、爻象绘制、六神颜色、伏神样式、响应式三档
 ├── api/
 │   └── qwen.js          # 通义千问 API 调用模块（双模型 callQwen，密钥在服务端）
-├── functions/           # Cloudflare Pages 后端（必须在仓库根）
-│   └── api/
-│       └── ai.js        # AI 释卦代理：前端经 /api/ai 调用，密钥存服务端环境变量
-├── README.md            # 本文件
-└── 测试仓库.txt         # 仓库初始化测试文件（保留）
+└── functions/           # Cloudflare Pages 后端（必须在仓库根）
+    └── api/
+        └── ai.js        # AI 释卦代理：前端经 /api/ai 调用，密钥存服务端环境变量
 ```
 
-## 模块化架构（ly/ 五层职责）
+## 二、模块化架构（ly/ 五层职责）
 
 | 层 | 文件 | 职责 | 关键导出 |
 |----|------|------|----------|
@@ -46,7 +49,7 @@ F:\github-dx\zsby\                              # 增删卜易独立仓库根（
 - **伏神降妖三式**：① 定乾坤（按 `BEN_GONG_INDEX` 取本宫首卦八纯卦）→ ② 寻龙诀（`zhaoFuShen` 在本宫首卦中找本卦缺失的某六亲所在爻）→ ③ 显真形（`paiPanDaiFuShen` 将伏神挂到本卦同爻位"飞神"之下）。
 - **六神起法**：日干定初爻六神起点（甲乙→青龙、丙丁→朱雀、戊→勾陈、己→螣蛇、庚辛→白虎、壬癸→玄武），自下而上顺排。
 
-## 核心数据流
+## 三、核心数据流
 
 1. **起卦**（`jiegou.html` + `ly/zhukong.js`）：支持两种起卦模式
    - **铜钱摇卦**：三枚铜钱六次摇卦 → 生成 `yaoResults`/`dongStatus`
@@ -58,7 +61,7 @@ F:\github-dx\zsby\                              # 增删卜易独立仓库根（
 3. **AI 解读**：`systemPrompt` 固化断卦口吻 + 六步框架 + 数据使用规则；`userPrompt` 结构化传入"已排定"数据，**AI 只解读、不计算**
 4. **历史**（`history.html`）：读取 `localStorage.guaHistory`，目录折叠式展示，含求卦者资料与 AI 解读回写
 
-## 模型说明
+## 四、模型说明
 
 释卦页提供两个模型，均来自阿里云百炼平台（千问同源），密钥存于服务端环境变量，前端 `api/qwen.js` 经 `functions/api/ai.js` 代理调用：
 
@@ -69,7 +72,7 @@ F:\github-dx\zsby\                              # 增删卜易独立仓库根（
 
 两模型提示词完全一致（断卦口吻 + 核心断卦原则 + 六步框架 + 数据使用规则 + 特别断卦规则 + 断卦铁律），确保解读风格与准确性统一。
 
-## 改动记录
+## 五、改动记录
 
 ### 模块化拆分（cfrw 批次）
 - 将日益庞大的单文件 `liuyao_divine.html` 拆分为 `jiegou.html`（结构）+ `ly/` 四模块（数据/算法/主控/样式）
@@ -116,7 +119,7 @@ F:\github-dx\zsby\                              # 增删卜易独立仓库根（
 - 各页"文集"返回链接由 `../index1.html` 改为道玄文集真实地址 `https://dxwj.pages.dev/index1.html`
 - 新增 `index.html` 门户页，统一导航至各功能页
 
-## 验证方法
+## 六、验证方法
 
 1. **手动输卦**：切换到"手动输卦"模式，为六爻选择四象（默认少阳·静）→ 点"排盘" → 本卦/变卦/世应/动爻标记准确 → 点"释卦"跳转 `jiegua.html` 并出解读
 2. **模式切换**：在铜钱摇卦与手动输卦之间来回切换，界面与状态均正常
@@ -127,13 +130,13 @@ F:\github-dx\zsby\                              # 增删卜易独立仓库根（
 7. **伏神验证**：选一缺六亲之卦（如天风姤缺妻财）→ 排盘后该六亲以伏神小字挂于对应飞神爻位之下
 8. **模型切换**：释卦页可切换"千问 3.7"与"千问备选"，两者均正常出解读
 
-## 依赖与存储
+## 七、依赖与存储
 
 - `lunar.js`：农历/干支/节气/旬空计算（约 435KB），现归入本仓库 `ly/lunar.js`，各页引用 `./ly/lunar.js`，不再依赖外部仓库
 - API 密钥：存于 Cloudflare Pages 环境变量（`QWEN_API_KEY`/`QWEN2_API_KEY`），前端经 `functions/api/ai.js` 代理调用，密钥永不进入前端代码
 - 数据存储：`localStorage`（`currentGua`、`userInfo`、`guaHistory`），仅本地浏览器，换设备/清缓存会丢失
 
-## 技术约束（不可改动）
+## 八、技术约束（不可改动）
 
 - `ly/suanfa.js` 排盘核心算法（六亲实时计算 `getLiuQinByWuXing`、`jiSuanLiuQin`；六神 `paiLiuShen`；伏神三式 `paiPanDaiFuShen`；变卦 `paiPanBianGua`；八宫纳甲数据）
 - `ly/zhukong.js` 主控流程（`completeAndDisplay`、`renderFinalResult`、`buildGuaHtml`）
