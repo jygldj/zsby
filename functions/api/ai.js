@@ -32,6 +32,7 @@ const CORS = {
 // ⚠️ 部署到新域名（非 dxwj.pages.dev）时，须在此数组追加该域名，否则前端请求被 403。
 const ALLOWED_ORIGINS = [
   'https://dxwj.pages.dev',
+  'https://zsby.pages.dev',
   'http://localhost',
   'http://127.0.0.1',
 ];
