@@ -14,25 +14,59 @@
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     font-family:"Songti SC","SimSun",serif;
-    background:var(--paper); color:var(--jade-ink);
+    /* 与内容页（yangshi.css）一致的青瓷渐变背景 */
+    background:#e8f1f2;
+    background-image:
+      radial-gradient(ellipse at 20% 50%, rgba(205, 224, 228, 0.5) 0%, transparent 60%),
+      radial-gradient(ellipse at 80% 50%, rgba(212, 228, 232, 0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 50% 100%, rgba(195, 216, 220, 0.45) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 0%, rgba(210, 226, 230, 0.35) 0%, transparent 30%);
+    color:var(--jade-ink);
     min-height:100vh; display:flex; flex-direction:column; align-items:center;
-    padding:48px 20px;
+    padding:48px 20px; position:relative;
   }
-  /* 居中内容列，呼应道玄文集 .content 布局 */
+  /* 太极阴阳鱼背景装饰（与内容页同源） */
+  body::before{
+    content:'☯';
+    position:fixed; font-size:300px; color:rgba(255,248,240,0.04);
+    top:50%; left:50%; transform:translate(-50%,-50%);
+    pointer-events:none; animation:taijiSpin 60s linear infinite;
+  }
+  @keyframes taijiSpin{
+    0%{transform:translate(-50%,-50%) rotate(0deg) scale(1.2);}
+    100%{transform:translate(-50%,-50%) rotate(360deg) scale(1.2);}
+  }
+  /* 星点闪烁 */
+  body::after{
+    content:''; position:fixed; top:0; left:0; right:0; bottom:0;
+    background-image:
+      radial-gradient(2px 2px at 10% 20%, rgba(255,255,240,0.15), transparent),
+      radial-gradient(2px 2px at 30% 60%, rgba(255,255,240,0.1), transparent),
+      radial-gradient(1px 1px at 50% 10%, rgba(255,255,240,0.2), transparent),
+      radial-gradient(2px 2px at 70% 40%, rgba(255,255,240,0.12), transparent),
+      radial-gradient(1px 1px at 90% 80%, rgba(255,255,240,0.18), transparent),
+      radial-gradient(1px 1px at 15% 85%, rgba(255,255,240,0.08), transparent),
+      radial-gradient(2px 2px at 60% 90%, rgba(255,255,240,0.1), transparent),
+      radial-gradient(1px 1px at 85% 15%, rgba(255,255,240,0.15), transparent);
+    pointer-events:none; z-index:0;
+  }
+  /* 居中内容列，呼应内容页 .container 布局并浮于背景装饰之上 */
   .page{
     width:100%; max-width:880px;
     display:flex; flex-direction:column; align-items:stretch;
+    position:relative; z-index:1;
   }
   .masthead{text-align:center; margin-bottom:30px}
   .masthead h1{font-size:34px; letter-spacing:6px; color:var(--accent)}
   .masthead p{margin-top:10px; color:var(--gold); font-size:14px; letter-spacing:2px}
-  /* 卡片容器：淡青白底 + 青瓷细边框 + 圆角，与主站面板风格统一 */
+  /* 卡片容器：与内容页 .container 一致的米色半透明圆角面板 + 双描边 + 深投影 */
   .entry-panel{
-    background:var(--jade);
-    border:1px solid var(--jade-line);
-    border-radius:10px;
+    background:rgba(246, 239, 230, 0.92);
+    backdrop-filter:blur(12px);
+    border:1px solid #c9b9a5;
+    border-radius:48px 48px 32px 32px;
     padding:24px;
-    box-shadow:0 2px 8px rgba(120,90,30,.08);
+    box-shadow:0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px #6b5a48 inset, 0 0 0 2px #bcab97 inset;
   }
   .grid{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
