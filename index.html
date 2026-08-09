@@ -6,22 +6,37 @@
 <title>增删卜易 · 六爻占卜系统</title>
 <style>
   :root{
-    --ink:#2c2417; --gold:#9a7b3f; --paper:#f7f1e3; --line:#d9c9a3;
+    --ink:#2c2417; --gold:#9a7b3f; --paper:#FFFEFC; --line:#d9c9a3;
     --card:#fffdf6; --accent:#7a1f1f;
+    /* 道玄文集主站青瓷色系 */
+    --jade:#eef3f2; --jade-line:#D1D9D9; --jade-ink:#5A4A3F;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{
     font-family:"Songti SC","SimSun",serif;
-    background:var(--paper); color:var(--ink);
+    background:var(--paper); color:var(--jade-ink);
     min-height:100vh; display:flex; flex-direction:column; align-items:center;
     padding:48px 20px;
   }
-  .masthead{text-align:center; margin-bottom:36px}
+  /* 居中内容列，呼应道玄文集 .content 布局 */
+  .page{
+    width:100%; max-width:880px;
+    display:flex; flex-direction:column; align-items:stretch;
+  }
+  .masthead{text-align:center; margin-bottom:30px}
   .masthead h1{font-size:34px; letter-spacing:6px; color:var(--accent)}
   .masthead p{margin-top:10px; color:var(--gold); font-size:14px; letter-spacing:2px}
+  /* 卡片容器：淡青白底 + 青瓷细边框 + 圆角，与主站面板风格统一 */
+  .entry-panel{
+    background:var(--jade);
+    border:1px solid var(--jade-line);
+    border-radius:10px;
+    padding:24px;
+    box-shadow:0 2px 8px rgba(120,90,30,.08);
+  }
   .grid{
     display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
-    gap:18px; width:100%; max-width:880px;
+    gap:18px; width:100%;
   }
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
@@ -38,13 +53,15 @@
 </style>
 </head>
 <body>
-  <div class="masthead">
-    <h1>增删卜易</h1>
-    <p>六爻占卜系统 · 以《增删卜易》为宗</p>
-  </div>
+  <div class="page">
+    <div class="masthead">
+      <h1>增删卜易</h1>
+      <p>六爻占卜系统 · 以《增删卜易》为宗</p>
+    </div>
 
-  <div class="grid">
-    <a class="card" href="jiegou.html">
+    <div class="entry-panel">
+      <div class="grid">
+        <a class="card" href="jiegou.html">
       <div class="ico">☯</div>
       <h2>起卦</h2>
       <p>铜钱摇卦 / 手动输卦，八宫纳甲排盘，本卦变卦世应动爻一目了然。</p>
@@ -69,10 +86,12 @@
       <h2>使用指南</h2>
       <p>起卦、排盘、释卦全流程说明与注意事项。</p>
     </a>
-  </div>
+      </div>
+    </div>
 
-  <div class="foot">
-    子系统独立运行 · <a href="https://dxwj.pages.dev/index1.html">返回道玄文集</a>
+    <div class="foot">
+      子系统独立运行 · <a href="https://dxwj.pages.dev/index1.html">返回道玄文集</a>
+    </div>
   </div>
 </body>
 </html>
