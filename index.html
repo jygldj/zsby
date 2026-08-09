@@ -23,32 +23,36 @@
       radial-gradient(ellipse at 50% 0%, rgba(210, 226, 230, 0.35) 0%, transparent 30%);
     color:var(--jade-ink);
     min-height:100vh; display:flex; flex-direction:column; align-items:center;
-    padding:48px 20px; position:relative;
+    padding:48px 20px; position:relative; overflow-x:hidden;
   }
-  /* 太极阴阳鱼背景装饰（与内容页同源） */
+  /* 太极阴阳鱼背景装饰（朱红淡影，旋转可见，不再近乎透明） */
   body::before{
     content:'☯';
-    position:fixed; font-size:300px; color:rgba(255,248,240,0.04);
-    top:50%; left:50%; transform:translate(-50%,-50%);
-    pointer-events:none; animation:taijiSpin 60s linear infinite;
+    position:fixed; font-size:420px; color:rgba(122, 31, 31, 0.09);
+    top:50%; left:50%; transform:translate(-50%,-50%) scale(1.4);
+    pointer-events:none; z-index:0; animation:taijiSpin 60s linear infinite;
   }
   @keyframes taijiSpin{
-    0%{transform:translate(-50%,-50%) rotate(0deg) scale(1.2);}
-    100%{transform:translate(-50%,-50%) rotate(360deg) scale(1.2);}
+    0%{transform:translate(-50%,-50%) scale(1.4) rotate(0deg);}
+    100%{transform:translate(-50%,-50%) scale(1.4) rotate(360deg);}
   }
-  /* 星点闪烁 */
+  /* 星点闪烁（金色可见，轻微明灭） */
   body::after{
-    content:''; position:fixed; top:0; left:0; right:0; bottom:0;
+    content:''; position:fixed; top:0; left:0; right:0; bottom:0; z-index:0;
     background-image:
-      radial-gradient(2px 2px at 10% 20%, rgba(255,255,240,0.15), transparent),
-      radial-gradient(2px 2px at 30% 60%, rgba(255,255,240,0.1), transparent),
-      radial-gradient(1px 1px at 50% 10%, rgba(255,255,240,0.2), transparent),
-      radial-gradient(2px 2px at 70% 40%, rgba(255,255,240,0.12), transparent),
-      radial-gradient(1px 1px at 90% 80%, rgba(255,255,240,0.18), transparent),
-      radial-gradient(1px 1px at 15% 85%, rgba(255,255,240,0.08), transparent),
-      radial-gradient(2px 2px at 60% 90%, rgba(255,255,240,0.1), transparent),
-      radial-gradient(1px 1px at 85% 15%, rgba(255,255,240,0.15), transparent);
-    pointer-events:none; z-index:0;
+      radial-gradient(2px 2px at 10% 20%, rgba(154,123,63,0.55), transparent),
+      radial-gradient(2px 2px at 30% 60%, rgba(154,123,63,0.45), transparent),
+      radial-gradient(1px 1px at 50% 10%, rgba(154,123,63,0.65), transparent),
+      radial-gradient(2px 2px at 70% 40%, rgba(154,123,63,0.5), transparent),
+      radial-gradient(1px 1px at 90% 80%, rgba(154,123,63,0.6), transparent),
+      radial-gradient(1px 1px at 15% 85%, rgba(154,123,63,0.4), transparent),
+      radial-gradient(2px 2px at 60% 90%, rgba(154,123,63,0.5), transparent),
+      radial-gradient(1px 1px at 85% 15%, rgba(154,123,63,0.55), transparent);
+    pointer-events:none; animation:starTwinkle 4s ease-in-out infinite;
+  }
+  @keyframes starTwinkle{
+    0%,100%{opacity:.45}
+    50%{opacity:1}
   }
   /* 居中内容列，呼应内容页 .container 布局并浮于背景装饰之上 */
   .page{
@@ -65,25 +69,50 @@
     backdrop-filter:blur(12px);
     border:1px solid #c9b9a5;
     border-radius:48px 48px 32px 32px;
-    padding:24px;
+    padding:28px 24px;
     box-shadow:0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px #6b5a48 inset, 0 0 0 2px #bcab97 inset;
   }
+  /* 桌面端三列对称网格；末位孤卡居中，保证视觉平衡 */
   .grid{
-    display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    display:grid; grid-template-columns:repeat(3,1fr);
     gap:18px; width:100%;
   }
+  @media (max-width:680px){ .grid{grid-template-columns:repeat(2,1fr)} }
+  @media (max-width:460px){ .grid{grid-template-columns:1fr} }
+  @media (min-width:681px){ .grid .card:last-child{ grid-column:2; } }
+
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
-    padding:24px 22px; text-decoration:none; color:var(--ink);
+    padding:22px 20px; text-decoration:none; color:var(--ink);
     transition:transform .15s ease, box-shadow .15s ease;
     box-shadow:0 2px 6px rgba(120,90,30,.08);
+    display:flex; flex-direction:column; align-items:center; text-align:center;
   }
   .card:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(120,90,30,.16)}
   .card .ico{font-size:26px}
   .card h2{font-size:19px; margin:12px 0 6px; color:var(--accent); letter-spacing:1px}
   .card p{font-size:13px; color:#6b5d44; line-height:1.6}
-  .foot{margin-top:40px; font-size:12px; color:var(--gold)}
-  .foot a{color:var(--gold); text-decoration:none; border-bottom:1px dashed var(--gold)}
+
+  /* 乾坤卦象（六爻线绘制） */
+  .guaxiang{display:flex; flex-direction:column; gap:4px; width:56px; margin:2px auto 8px}
+  .guaxiang .y{display:block; height:5px; width:100%; border-radius:3px; background:var(--accent)}
+  .guaxiang .y.yin{background:transparent; position:relative}
+  .guaxiang .y.yin::before,
+  .guaxiang .y.yin::after{content:''; position:absolute; top:0; height:5px; width:42%; border-radius:3px; background:var(--accent)}
+  .guaxiang .y.yin::before{left:0}
+  .guaxiang .y.yin::after{right:0}
+
+  /* 页脚：版权 + 道玄文集维护（突出显示） */
+  .foot{margin-top:34px; text-align:center; font-size:12px; color:var(--gold); line-height:2}
+  .foot .copyright{letter-spacing:1px}
+  .foot .maintain a.hl{color:var(--accent); font-weight:700; text-decoration:none; border-bottom:1px solid var(--accent); padding:0 2px}
+  .foot .maintain a.hl.url{
+    display:inline-block; margin-top:8px;
+    background:rgba(154,123,63,0.16); border:1px solid var(--gold);
+    border-radius:20px; padding:5px 16px; color:var(--accent);
+    font-weight:700; letter-spacing:.5px;
+  }
+  .foot .maintain a.hl.url:hover{background:rgba(154,123,63,0.28)}
 </style>
 </head>
 <body>
@@ -96,35 +125,54 @@
     <div class="entry-panel">
       <div class="grid">
         <a class="card" href="jiegou.html">
-      <div class="ico">☯</div>
-      <h2>起卦</h2>
-      <p>铜钱摇卦 / 手动输卦，八宫纳甲排盘，本卦变卦世应动爻一目了然。</p>
-    </a>
-    <a class="card" href="jiegua.html">
-      <div class="ico">📜</div>
-      <h2>释卦</h2>
-      <p>AI 解读卦象，旺衰格局、用神取舍、应期提示，古法推演供参考。</p>
-    </a>
-    <a class="card" href="wnl.html">
-      <div class="ico">📅</div>
-      <h2>万年历</h2>
-      <p>农历干支、节气旬空、真太阳时、断卦参数，通书随身。</p>
-    </a>
-    <a class="card" href="history.html">
-      <div class="ico">📚</div>
-      <h2>历史</h2>
-      <p>历次占验记录（本地存储），折叠检索，便于复盘。</p>
-    </a>
-    <a class="card" href="help.html">
-      <div class="ico">❓</div>
-      <h2>使用指南</h2>
-      <p>起卦、排盘、释卦全流程说明与注意事项。</p>
-    </a>
+          <div class="ico">☯</div>
+          <h2>起卦</h2>
+          <p>铜钱摇卦 / 手动输卦，八宫纳甲排盘，本卦变卦世应动爻一目了然。</p>
+        </a>
+        <a class="card" href="jiegua.html">
+          <div class="ico">📜</div>
+          <h2>释卦</h2>
+          <p>AI 解读卦象，旺衰格局、用神取舍、应期提示，古法推演供参考。</p>
+        </a>
+        <a class="card" href="wnl.html">
+          <div class="ico">📅</div>
+          <h2>万年历</h2>
+          <p>农历干支、节气旬空、真太阳时、断卦参数，通书随身。</p>
+        </a>
+        <a class="card" href="history.html">
+          <div class="ico">📚</div>
+          <h2>历史</h2>
+          <p>历次占验记录（本地存储），折叠检索，便于复盘。</p>
+        </a>
+        <a class="card" href="help.html">
+          <div class="ico">❓</div>
+          <h2>使用指南</h2>
+          <p>起卦、排盘、释卦全流程说明与注意事项。</p>
+        </a>
+        <a class="card" href="jiegou.html">
+          <div class="guaxiang">
+            <i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i>
+          </div>
+          <h2>乾卦 · 天</h2>
+          <p>天行健，君子以自强不息。纯阳之首，刚健中正。</p>
+        </a>
+        <a class="card" href="jiegou.html">
+          <div class="guaxiang">
+            <i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i>
+          </div>
+          <h2>坤卦 · 地</h2>
+          <p>地势坤，君子以厚德载物。纯阴之母，柔顺承载。</p>
+        </a>
       </div>
     </div>
 
     <div class="foot">
-      子系统独立运行 · <a href="https://dxwj.pages.dev/index1.html">返回道玄文集</a>
+      <div class="copyright">© 2026 增删卜易 · 六爻占卜系统</div>
+      <div class="maintain">
+        由 <a class="hl" href="https://dxwj.pages.dev/" target="_blank" rel="noopener">道玄文集</a> 维护并收录
+        <br>
+        <a class="hl url" href="https://dxwj.pages.dev/" target="_blank" rel="noopener">https://dxwj.pages.dev/</a>
+      </div>
     </div>
   </div>
 </body>
