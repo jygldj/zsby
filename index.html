@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>增删卜易 · 六爻占卜系统</title>
+<title>增删卜易 · 数字系统</title>
 <style>
   :root{
     --ink:#2c2417; --gold:#9a7b3f; --paper:#FFFEFC; --line:#d9c9a3;
@@ -25,20 +25,20 @@
     min-height:100vh; display:flex; flex-direction:column; align-items:center;
     padding:48px 20px; position:relative; overflow-x:hidden;
   }
-  /* 太极阴阳鱼背景装饰（朱红淡影，旋转可见，不再近乎透明） */
+  /* 太极阴阳鱼：置于卡片上层、透明淡显、不拦截点击 */
   body::before{
     content:'☯';
-    position:fixed; font-size:420px; color:rgba(122, 31, 31, 0.09);
+    position:fixed; font-size:420px; color:rgba(122, 31, 31, 0.07);
     top:50%; left:50%; transform:translate(-50%,-50%) scale(1.4);
-    pointer-events:none; z-index:0; animation:taijiSpin 60s linear infinite;
+    pointer-events:none; z-index:3; animation:taijiSpin 60s linear infinite;
   }
   @keyframes taijiSpin{
     0%{transform:translate(-50%,-50%) scale(1.4) rotate(0deg);}
     100%{transform:translate(-50%,-50%) scale(1.4) rotate(360deg);}
   }
-  /* 星点闪烁（金色可见，轻微明灭） */
+  /* 星点：置于卡片上层、金色可见、轻微明灭、不拦截点击 */
   body::after{
-    content:''; position:fixed; top:0; left:0; right:0; bottom:0; z-index:0;
+    content:''; position:fixed; top:0; left:0; right:0; bottom:0; z-index:3;
     background-image:
       radial-gradient(2px 2px at 10% 20%, rgba(154,123,63,0.55), transparent),
       radial-gradient(2px 2px at 30% 60%, rgba(154,123,63,0.45), transparent),
@@ -54,7 +54,7 @@
     0%,100%{opacity:.45}
     50%{opacity:1}
   }
-  /* 居中内容列，呼应内容页 .container 布局并浮于背景装饰之上 */
+  /* 居中内容列，浮于背景装饰之下（装饰 z-index:3 位于其上） */
   .page{
     width:100%; max-width:880px;
     display:flex; flex-direction:column; align-items:stretch;
@@ -62,7 +62,7 @@
   }
   .masthead{text-align:center; margin-bottom:30px}
   .masthead h1{font-size:34px; letter-spacing:6px; color:var(--accent)}
-  .masthead p{margin-top:10px; color:var(--gold); font-size:14px; letter-spacing:2px}
+  .masthead p{margin-top:10px; color:var(--gold); font-size:15px; letter-spacing:3px}
   /* 卡片容器：与内容页 .container 一致的米色半透明圆角面板 + 双描边 + 深投影 */
   .entry-panel{
     background:rgba(246, 239, 230, 0.92);
@@ -72,14 +72,13 @@
     padding:28px 24px;
     box-shadow:0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px #6b5a48 inset, 0 0 0 2px #bcab97 inset;
   }
-  /* 桌面端三列对称网格；末位孤卡居中，保证视觉平衡 */
+  /* 桌面端三列对称网格（6 卡 = 3×2） */
   .grid{
     display:grid; grid-template-columns:repeat(3,1fr);
     gap:18px; width:100%;
   }
   @media (max-width:680px){ .grid{grid-template-columns:repeat(2,1fr)} }
   @media (max-width:460px){ .grid{grid-template-columns:1fr} }
-  @media (min-width:681px){ .grid .card:last-child{ grid-column:2; } }
 
   .card{
     background:var(--card); border:1px solid var(--line); border-radius:12px;
@@ -94,32 +93,29 @@
   .card p{font-size:13px; color:#6b5d44; line-height:1.6}
 
   /* 乾坤卦象（六爻线绘制） */
-  .guaxiang{display:flex; flex-direction:column; gap:4px; width:56px; margin:2px auto 8px}
+  .guaxiang{display:flex; flex-direction:column; gap:4px; width:44px}
   .guaxiang .y{display:block; height:5px; width:100%; border-radius:3px; background:var(--accent)}
   .guaxiang .y.yin{background:transparent; position:relative}
   .guaxiang .y.yin::before,
   .guaxiang .y.yin::after{content:''; position:absolute; top:0; height:5px; width:42%; border-radius:3px; background:var(--accent)}
   .guaxiang .y.yin::before{left:0}
   .guaxiang .y.yin::after{right:0}
+  /* 乾坤合并卡：两卦并排 */
+  .guaxiang-pair{display:flex; gap:18px; justify-content:center; margin:8px 0 6px}
+  .gx{display:flex; flex-direction:column; align-items:center; gap:6px}
+  .gx span{font-size:13px; color:var(--accent); font-weight:700; letter-spacing:3px}
 
-  /* 页脚：版权 + 道玄文集维护（突出显示） */
-  .foot{margin-top:34px; text-align:center; font-size:12px; color:var(--gold); line-height:2}
-  .foot .copyright{letter-spacing:1px}
-  .foot .maintain a.hl{color:var(--accent); font-weight:700; text-decoration:none; border-bottom:1px solid var(--accent); padding:0 2px}
-  .foot .maintain a.hl.url{
-    display:inline-block; margin-top:8px;
-    background:rgba(154,123,63,0.16); border:1px solid var(--gold);
-    border-radius:20px; padding:5px 16px; color:var(--accent);
-    font-weight:700; letter-spacing:.5px;
-  }
-  .foot .maintain a.hl.url:hover{background:rgba(154,123,63,0.28)}
+  /* 落款：单行版权 + 道玄文集内链 */
+  .foot{margin-top:30px; text-align:center; font-size:12.5px; color:var(--gold); letter-spacing:.5px; line-height:1.8}
+  .foot .hl{color:var(--accent); font-weight:700; text-decoration:none; border-bottom:1px solid var(--accent); padding:0 2px}
+  .foot .hl:hover{opacity:.8}
 </style>
 </head>
 <body>
   <div class="page">
     <div class="masthead">
       <h1>增删卜易</h1>
-      <p>六爻占卜系统 · 以《增删卜易》为宗</p>
+      <p>数字系统</p>
     </div>
 
     <div class="entry-panel">
@@ -150,29 +146,24 @@
           <p>起卦、排盘、释卦全流程说明与注意事项。</p>
         </a>
         <a class="card" href="jiegou.html">
-          <div class="guaxiang">
-            <i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i>
+          <h2>乾坤 · 两仪</h2>
+          <div class="guaxiang-pair">
+            <div class="gx">
+              <div class="guaxiang"><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i><i class="y"></i></div>
+              <span>乾</span>
+            </div>
+            <div class="gx">
+              <div class="guaxiang"><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i></div>
+              <span>坤</span>
+            </div>
           </div>
-          <h2>乾卦 · 天</h2>
-          <p>天行健，君子以自强不息。纯阳之首，刚健中正。</p>
-        </a>
-        <a class="card" href="jiegou.html">
-          <div class="guaxiang">
-            <i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i><i class="y yin"></i>
-          </div>
-          <h2>坤卦 · 地</h2>
-          <p>地势坤，君子以厚德载物。纯阴之母，柔顺承载。</p>
+          <p>纯阳之首，刚健中正<br>纯阴之母，柔顺承载</p>
         </a>
       </div>
     </div>
 
     <div class="foot">
-      <div class="copyright">© 2026 增删卜易 · 六爻占卜系统</div>
-      <div class="maintain">
-        由 <a class="hl" href="https://dxwj.pages.dev/" target="_blank" rel="noopener">道玄文集</a> 维护并收录
-        <br>
-        <a class="hl url" href="https://dxwj.pages.dev/" target="_blank" rel="noopener">https://dxwj.pages.dev/</a>
-      </div>
+      © 2026 增删卜易 · 数字系统由 <a class="hl" href="https://dxwj.pages.dev/" target="_blank" rel="noopener">道玄文集</a> 维护
     </div>
   </div>
 </body>
