@@ -1,0 +1,628 @@
+/* ============================================================
+   yangshi.css - 样式层（纯 CSS，不含逻辑）
+   职责：古风排版、爻象绘制、六神颜色、伏神样式、响应式适配
+   ============================================================ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+    font-family: 'Georgia', 'Times New Roman', serif;
+    background: #e8f1f2;
+    background-image:
+        radial-gradient(ellipse at 20% 50%, rgba(205, 224, 228, 0.5) 0%, transparent 60%),
+        radial-gradient(ellipse at 80% 50%, rgba(212, 228, 232, 0.4) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 100%, rgba(195, 216, 220, 0.45) 0%, transparent 40%),
+        radial-gradient(ellipse at 50% 0%, rgba(210, 226, 230, 0.35) 0%, transparent 30%);
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+    position: relative;
+}
+
+/* 太极阴阳鱼背景装饰（纯CSS） */
+body::before {
+    content: '☯';
+    position: fixed;
+    font-size: 300px;
+    color: rgba(255, 248, 240, 0.04);
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+    animation: taijiSpin 60s linear infinite;
+}
+
+@keyframes taijiSpin {
+    0% { transform: translate(-50%, -50%) rotate(0deg) scale(1.2); }
+    100% { transform: translate(-50%, -50%) rotate(360deg) scale(1.2); }
+}
+
+/* 星点闪烁 */
+body::after {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-image:
+        radial-gradient(2px 2px at 10% 20%, rgba(255,255,240,0.15), transparent),
+        radial-gradient(2px 2px at 30% 60%, rgba(255,255,240,0.1), transparent),
+        radial-gradient(1px 1px at 50% 10%, rgba(255,255,240,0.2), transparent),
+        radial-gradient(2px 2px at 70% 40%, rgba(255,255,240,0.12), transparent),
+        radial-gradient(1px 1px at 90% 80%, rgba(255,255,240,0.18), transparent),
+        radial-gradient(1px 1px at 15% 85%, rgba(255,255,240,0.08), transparent),
+        radial-gradient(2px 2px at 60% 90%, rgba(255,255,240,0.1), transparent),
+        radial-gradient(1px 1px at 85% 15%, rgba(255,255,240,0.15), transparent);
+    pointer-events: none;
+    z-index: 0;
+}
+
+.container {
+    position: relative;
+    z-index: 1;
+    max-width: 840px;
+    width: 100%;
+    background: rgba(246, 239, 230, 0.92);
+    backdrop-filter: blur(12px);
+    padding: 30px 30px 40px;
+    border-radius: 48px 48px 32px 32px;
+    box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px #6b5a48 inset, 0 0 0 2px #bcab97 inset;
+    border: 1px solid #c9b9a5;
+}
+h1 {
+    font-size: 26px;
+    text-align: center;
+    font-weight: normal;
+    letter-spacing: 8px;
+    color: #3f2e1e;
+    border-bottom: 2px solid #cbb8a4;
+    padding-bottom: 15px;
+    margin-bottom: 20px;
+}
+.status-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #dad0c2;
+    padding: 10px 20px;
+    border-radius: 60px;
+    margin-bottom: 20px;
+    color: #3c2e22;
+    font-size: 15px;
+    border: 1px solid #b6a490;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);
+}
+.progress-text { font-weight: bold; letter-spacing: 2px; }
+.reset-btn {
+    background: #5a4535;
+    border: none;
+    color: #efe5da;
+    padding: 6px 18px;
+    border-radius: 40px;
+    font-size: 13px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+    letter-spacing: 1px;
+}
+.reset-btn:hover { background: #3f2f22; }
+.coin-area {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+    padding: 25px 0 20px;
+    background: #e6dbce;
+    border-radius: 80px;
+    margin-bottom: 20px;
+    border: 1px solid #bfae99;
+    box-shadow: inset 0 4px 12px rgba(0,0,0,0.08);
+    min-height: 130px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+.coin {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #f5e6c8, #c4a87a);
+    box-shadow: 0 6px 0 #8a765d, 0 10px 20px rgba(0,0,0,0.3);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 32px;
+    font-weight: bold;
+    color: #3f2e1b;
+    transition: all 0.3s ease;
+    border: 2px solid #b3946a;
+    user-select: none;
+}
+.coin.flipping { animation: flipCoin 0.5s ease-in-out; }
+@keyframes flipCoin {
+    0% { transform: rotateY(0deg) scale(1); }
+    50% { transform: rotateY(180deg) scale(1.15); }
+    100% { transform: rotateY(360deg) scale(1); }
+}
+.coin.face-yang { background: radial-gradient(circle at 30% 30%, #f7edd9, #dbbc92); color: #2d1f12; }
+.coin.face-yin { background: radial-gradient(circle at 30% 30%, #d4c4b0, #a0876e); color: #1f160f; }
+.action-area {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin: 18px 0 22px;
+    flex-wrap: wrap;
+}
+.primary-btn {
+    background: #6b4f39;
+    border: none;
+    color: #f5ede4;
+    padding: 14px 48px;
+    border-radius: 60px;
+    font-size: 20px;
+    font-weight: bold;
+    letter-spacing: 6px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+    box-shadow: 0 6px 0 #3d2d1f, 0 6px 16px rgba(0,0,0,0.3);
+    border: 1px solid #8f745b;
+}
+.primary-btn:hover:not(:disabled) {
+    background: #7d5d43;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 0 #3d2d1f, 0 10px 24px rgba(0,0,0,0.4);
+}
+.primary-btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 2px 0 #3d2d1f; }
+.primary-btn:disabled {
+    opacity: 0.4;
+    transform: translateY(4px);
+    box-shadow: 0 2px 0 #3d2d1f;
+    cursor: not-allowed;
+}
+.secondary-btn {
+    background: #b09a84;
+    border: none;
+    color: #2d241c;
+    padding: 14px 28px;
+    border-radius: 60px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+    box-shadow: 0 4px 0 #7a6652;
+    border: 1px solid #c9b49e;
+}
+.secondary-btn:hover:not(:disabled) {
+    background: #c0aa94;
+    transform: translateY(-2px);
+}
+.secondary-btn:disabled {
+    opacity: 0.3;
+    transform: translateY(4px);
+    box-shadow: 0 1px 0 #7a6652;
+    cursor: not-allowed;
+}
+#resultArea {
+    margin-top: 20px;
+    background: #f8f1e8;
+    border-radius: 24px;
+    padding: 20px;
+    border: 1px solid #d5c6b4;
+    min-height: 120px;
+    transition: 0.3s;
+}
+.result-placeholder {
+    color: #9a8876;
+    text-align: center;
+    padding: 30px 0;
+    font-style: italic;
+    letter-spacing: 4px;
+    font-size: 22px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.gua-result { animation: fadeIn 0.6s ease; }
+@keyframes fadeIn { 0% { opacity: 0; transform: translateY(10px); } 100% { opacity: 1; transform: translateY(0); } }
+.gua-title {
+    font-size: 22px;
+    font-weight: bold;
+    color: #3f2e1e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid #d5c6b4;
+    padding-bottom: 12px;
+    margin-bottom: 14px;
+}
+.gua-sub { font-size: 14px; font-weight: normal; color: #7d6b58; background: #e6dbce; padding: 4px 16px; border-radius: 30px; }
+.yao-grid { display: flex; flex-direction: column-reverse; gap: 5px; margin: 8px 0; }
+.yao-row {
+    display: grid;
+    grid-template-columns: 50px 56px 54px 46px 36px 28px;
+    align-items: center;
+    gap: 4px;
+    background: #f2ebe1;
+    padding: 7px 8px;
+    border-radius: 10px;
+    border-left: 5px solid #b09a84;
+    font-size: 14px;
+    white-space: nowrap;
+}
+.yao-row.dong { border-left-color: #b33; background: #f7e8e0; }
+.yao-liushen { color: #4a6a5a; font-size: 12px; }
+.yao-yaoxiang { font-size: 16px; font-family: 'Courier New', Consolas, monospace; letter-spacing: 0; white-space: nowrap; display: inline-block; width: 100%; text-align: center; color: #3f2e1e; }
+.yao-najia { font-weight: bold; font-size: 15px; color: #3f2e1e; }
+.yao-liuqin { color: #6b5844; }
+.yao-shiying { color: #6b4f39; background: #d5c6b4; padding: 0 8px; border-radius: 20px; font-size: 12px; justify-self: start; }
+.yao-dong-mark { justify-self: end; font-weight: bold; color: #b33; font-size: 18px; }
+
+/* ====== 伏神小字样式 ====== */
+.fu-shen {
+    display: block;
+    font-size: 10px;
+    color: #9a6a3a;
+    font-weight: normal;
+    line-height: 1.2;
+    margin-top: 1px;
+}
+
+.flex-row { display: flex; gap: 20px; flex-wrap: wrap; }
+.flex-row .gua-box { flex: 1; min-width: 200px; }
+.footer-note {
+    margin-top: 20px;
+    font-size: 12px;
+    color: #a48d78;
+    text-align: center;
+    border-top: 1px solid #e0d3c4;
+    padding-top: 16px;
+    letter-spacing: 1px;
+}
+.mapping-status {
+    font-size: 12px;
+    color: #6b5844;
+    text-align: center;
+    margin-top: 8px;
+    background: #e6dbce;
+    padding: 4px 12px;
+    border-radius: 30px;
+    display: inline-block;
+}
+.user-info-area {
+    background: rgba(255, 248, 240, 0.85);
+    backdrop-filter: blur(8px);
+    border-radius: 20px;
+    padding: 16px 24px;
+    margin-bottom: 16px;
+    border: 1px solid #d5c6b4;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+}
+.user-info-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #4d3b2b;
+    letter-spacing: 4px;
+    border-bottom: 1px solid #e0d3c4;
+    padding-bottom: 8px;
+    margin-bottom: 12px;
+}
+.user-info-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    align-items: flex-end;
+}
+.field-group {
+    min-width: 0;
+}
+/* 姓名：4 颗汉字 */
+.field-group.fixed-name { flex: 0 0 90px; }
+/* 性别：2 颗汉字（含下拉箭头） */
+.field-group.fixed-gender { flex: 0 0 64px; }
+/* 出生时辰：12 颗汉字 */
+.field-group.fixed-birth { flex: 0 0 230px; }
+/* 所问之事：占满剩余空间 */
+.field-group.fluid { flex: 1; min-width: 200px; }
+.field-group label {
+    display: block;
+    font-size: 12px;
+    color: #7a6652;
+    letter-spacing: 2px;
+    margin-bottom: 4px;
+}
+.field-group input,
+.field-group select {
+    width: 100%;
+    padding: 8px 12px;
+    font-size: 14px;
+    border-radius: 10px;
+    border: 1px solid #d5c6b4;
+    background: rgba(255, 248, 240, 0.6);
+    font-family: inherit;
+    color: #3c2e22;
+    transition: 0.2s;
+}
+.field-group input:focus,
+.field-group select:focus {
+    outline: none;
+    border-color: #8a765d;
+    box-shadow: 0 0 0 3px rgba(107, 79, 57, 0.15);
+}
+/* 下拉框去除系统默认外观，统一为与文本框相同的盒模型，高度/边框完全一致 */
+.field-group select {
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    cursor: pointer;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236b4f39' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+}
+.field-group input::placeholder {
+    color: #b09a84;
+    font-style: italic;
+}
+/* 求卦者信息标签加粗，与页面其他标签区分 */
+.user-info-fields .field-group label,
+.field-group.user-label-bold label {
+    font-weight: bold;
+    color: #5a4632;
+}
+.nav-bar {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+.nav-bar a {
+    color: #6b4f39;
+    text-decoration: none;
+    padding: 6px 18px;
+    border-radius: 30px;
+    background: #ede3d7;
+    border: 1px solid #d5c6b4;
+    font-size: 14px;
+    transition: 0.2s;
+}
+.nav-bar a:hover { background: #d5c6b4; }
+.nav-bar a.active { background: #6b4f39; color: #f5ede4; border-color: #6b4f39; }
+.nav-bar a.external-link { background: #ede3d7; color: #6b4f39; border-color: #d5c6b4; }
+.nav-bar a.external-link:hover { background: #d5c6b4; color: #3f2e1e; border-color: #c2b39c; }
+
+/* ====== 模式切换栏 ====== */
+.mode-switch-bar {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.mode-btn {
+    background: #ede3d7;
+    border: 1px solid #d5c6b4;
+    color: #6b4f39;
+    padding: 8px 26px;
+    border-radius: 20px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    flex-shrink: 0;
+    font-family: inherit;
+    letter-spacing: 2px;
+}
+.mode-btn:hover { background: #d5c6b4; color: #3f2e1e; }
+.mode-btn.active {
+    background: #6b4f39;
+    color: #f5ede4;
+    border-color: #6b4f39;
+    box-shadow: 0 3px 8px rgba(107,79,57,0.3);
+}
+
+/* ====== 手动输卦面板 ====== */
+.input-panel-title {
+    text-align: center;
+    font-size: 15px;
+    color: #5a4632;
+    font-weight: bold;
+    letter-spacing: 3px;
+    margin-bottom: 12px;
+}
+.yao-input-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #f2ebe1;
+    padding: 8px 14px;
+    border-radius: 10px;
+    margin-bottom: 6px;
+    border-left: 5px solid #b09a84;
+}
+.yao-input-row .yao-input-label {
+    min-width: 56px;
+    font-weight: bold;
+    color: #7a6652;
+    font-size: 14px;
+}
+.yao-input-row select {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 14px;
+    border-radius: 8px;
+    border: 1px solid #d5c6b4;
+    background: rgba(255, 248, 240, 0.6);
+    font-family: inherit;
+    color: #3c2e22;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236b4f39' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+}
+.yao-input-row .yao-preview {
+    min-width: 44px;
+    text-align: center;
+    font-size: 22px;
+    font-weight: bold;
+    color: #3f2e1e;
+    line-height: 1;
+}
+
+/* ====== 响应式：平板（≤ 500px） ====== */
+@media (max-width: 500px) {
+    body { padding: 4px; }
+    .container { padding: 8px; border-radius: 24px 24px 16px 16px; }
+    .coin { width: 56px; height: 56px; font-size: 24px; }
+    .primary-btn { padding: 10px 24px; font-size: 16px; }
+
+    .mode-switch-bar { gap: 8px; flex-wrap: wrap; }
+    .mode-btn {
+        padding: 7px 18px;
+        font-size: 13px;
+        font-weight: 500;
+        min-height: 44px;
+    }
+    .reset-btn { min-height: 44px; }
+
+    .user-info-area { padding: 10px 8px; }
+    .user-info-title { font-size: 14px; margin-bottom: 8px; }
+    .user-info-fields {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 6px 6px;
+    }
+    .field-group.fixed-name { flex: 1 1 0; min-width: 4em; }
+    .field-group.fixed-gender { flex: 0 0 4.5em; }
+    .field-group.fixed-birth { flex: 0 0 100%; }
+    .field-group.fluid { flex: 1 1 100%; min-width: 0; }
+    .field-group { min-width: 0; }
+    .field-group input,
+    .field-group select {
+        padding: 7px 8px;
+        font-size: 15px;
+    }
+
+    .action-area {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .action-area .primary-btn,
+    .action-area .secondary-btn {
+        width: 100%;
+        justify-content: center;
+        padding: 14px 20px;
+        font-size: 18px;
+        min-height: 48px;
+    }
+
+    .gua-title {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+    .gua-title .gua-sub {
+        font-size: 12px;
+    }
+    .gua-title + div .mapping-status {
+        display: block;
+        margin: 4px auto;
+        width: fit-content;
+    }
+
+    h1 {
+        font-size: 20px;
+        letter-spacing: 4px;
+    }
+
+    .result-placeholder {
+        font-size: 18px;
+        padding: 20px 0;
+    }
+
+    .coin-area {
+        gap: 12px;
+        padding: 18px 0;
+        min-height: 100px;
+    }
+
+    .status-bar {
+        font-size: 13px;
+        padding: 8px 14px;
+    }
+
+    .nav-bar {
+        gap: 6px;
+        justify-content: center;
+    }
+    .nav-bar a {
+        flex: 1 1 calc(33.33% - 8px);
+        text-align: center;
+        min-width: 0;
+        font-size: 12px;
+        padding: 6px 4px;
+    }
+
+    .yao-row {
+        grid-template-columns: 44px 48px 48px 42px 32px 26px;
+        gap: 3px;
+        padding: 6px 5px;
+        font-size: 13px;
+    }
+    .yao-liushen { font-size: 11px; }
+    .yao-yaoxiang { font-size: 14px; }
+    .yao-najia { font-size: 13px; }
+    .yao-dong-mark { font-size: 16px; }
+    .fu-shen { font-size: 9px; }
+
+    /* 窄屏：释卦页「应期反查 / 为此卦择吉」内联按钮纳管，全宽堆叠、触摸目标≥44px */
+    .zeji-btn {
+        display: inline-block;
+        width: 100%;
+        box-sizing: border-box;
+        margin: 8px 0 0 0;
+        min-height: 44px;
+        text-align: center;
+        font-size: 14px;
+    }
+    .action-btn {
+        min-height: 44px;
+        padding: 10px 14px;
+        font-size: 14px;
+    }
+}
+
+/* ====== 响应式：小屏手机（≤ 400px） ====== */
+@media (max-width: 400px) {
+    body { padding: 2px; }
+    .container { padding: 6px; }
+    .coin { width: 46px; height: 46px; font-size: 20px; }
+    .coin-area { gap: 8px; padding: 12px 0; min-height: 80px; }
+    h1 { font-size: 17px; letter-spacing: 2px; }
+    .result-placeholder { font-size: 15px; }
+    .action-area .primary-btn,
+    .action-area .secondary-btn {
+        font-size: 15px;
+        padding: 12px 16px;
+    }
+    .user-info-area { padding: 8px 6px; }
+    .nav-bar a { font-size: 11px; padding: 5px 3px; }
+    .field-group.fixed-name { flex: 1 1 0; min-width: 3.5em; }
+    .field-group.fixed-gender { flex: 0 0 4em; }
+    .mode-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+    }
+    .yao-row {
+        grid-template-columns: 40px 44px 44px 40px 30px 24px;
+        font-size: 12px;
+        padding: 5px 4px;
+    }
+    .yao-liushen { font-size: 10px; }
+    .yao-yaoxiang { font-size: 13px; }
+    .yao-najia { font-size: 12px; }
+    .fu-shen { font-size: 8px; }
+}

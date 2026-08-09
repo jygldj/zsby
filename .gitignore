@@ -1,0 +1,21 @@
+# 依赖与构建产物
+node_modules/
+dist/
+.cache/
+.turbo/
+
+# 环境变量 / 密钥（绝不入库）
+.env
+.env.*
+wrangler.toml
+.dev.vars
+
+# 系统 / 编辑器
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# 本地临时
+.idea/
+.vscode/

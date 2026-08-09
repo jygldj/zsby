@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>增删卜易 · 铜钱占</title>
+    <link rel="stylesheet" href="ly/yangshi.css">
+</head>
+<body>
+<div class="container">
+    <h1>⚘ 增删卜易 · 铜钱占</h1>
+
+    <!-- 导航栏 -->
+    <div class="nav-bar">
+        <a href="jiegou.html" class="active">🔮 起卦</a>
+        <a href="jiegua.html" id="jieguaLink">📜 释卦</a>
+        <a href="history.html">📖 历史</a>
+        <a href="help.html">❓ 指南</a>
+        <a href="wnl.html" title="万年历">🗓️ 万年历</a>
+        <a href="https://dxwj.pages.dev/index1.html" target="_blank" class="external-link" title="返回道玄文集">🏠 文集</a>
+    </div>
+
+    <!-- 模式切换 -->
+    <div class="mode-switch-bar">
+        <button class="mode-btn active" id="modeCoinBtn">🪙 铜钱摇卦</button>
+        <button class="mode-btn" id="modeInputBtn">✍️ 手动输卦</button>
+    </div>
+
+    <!-- 求卦者信息 -->
+    <div class="user-info-area" id="userInfoArea">
+        <div class="user-info-title">🧘 求卦者信息</div>
+        <div class="user-info-fields">
+            <div class="field-group fixed-name">
+                <label for="userName">姓名</label>
+                <input type="text" id="userName" placeholder="姓名">
+            </div>
+            <div class="field-group fixed-gender">
+                <label for="userGender">性别</label>
+                <select id="userGender">
+                    <option value="男">男</option>
+                    <option value="女">女</option>
+                </select>
+            </div>
+            <div class="field-group fixed-birth">
+                <label for="userBirth">出生时辰</label>
+                <input type="text" id="userBirth" placeholder="如：癸卯年辛酉月癸酉日庚申时">
+            </div>
+            <div class="field-group fluid">
+                <label for="userQuestion">所问之事</label>
+                <input type="text" id="userQuestion" placeholder="所问之事">
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span class="progress-text" id="progressText">第 0 / 6 爻</span>
+        <button class="reset-btn" id="resetBtn">⟲ 重起</button>
+    </div>
+    <div class="coin-area" id="coinArea">
+        <div class="coin" id="coin1">⚊</div>
+        <div class="coin" id="coin2">⚊</div>
+        <div class="coin" id="coin3">⚊</div>
+    </div>
+    <!-- 手动输卦面板（默认隐藏） -->
+    <div id="inputArea" style="display: none; background: #e6dbce; border-radius: 80px; padding: 20px 16px; margin-bottom: 20px; border: 1px solid #bfae99; box-shadow: inset 0 4px 12px rgba(0,0,0,0.08);">
+        <div class="input-panel-title">✍️ 手动输入六爻（初爻在下，上爻在上）</div>
+        <div id="yaoInputContainer"></div>
+        <div class="manual-time-area" id="manualTimeArea" style="margin-top:14px; padding:12px; background:#f3ead9; border-radius:14px; border:1px solid #cbb89c;">
+            <div class="input-panel-title" style="margin-bottom:8px; font-size:13px;">🕐 起卦时间（复盘/测试用 · 可手动修改）</div>
+            <div class="time-fields" style="display:flex; flex-wrap:wrap; gap:12px; align-items:center;">
+                <label style="font-size:13px; color:#5a4632;">年 <select id="selYear" class="time-sel"></select></label>
+                <label style="font-size:13px; color:#5a4632;">月建 <select id="selMonth" class="time-sel"></select></label>
+                <label style="font-size:13px; color:#5a4632;">日辰 <select id="selDay" class="time-sel"></select></label>
+                <label style="font-size:13px; color:#5a4632;">时辰 <select id="selHour" class="time-sel"></select></label>
+            </div>
+            <div style="font-size:11px;color:#8a6a4a;margin-top:6px;">留空项在排盘时自动取当前真太阳时补全（无提示、无弹窗）</div>
+        </div>
+        <div style="text-align:center; margin-top:12px; font-size:12px; color:#7a6a55;">选好六爻后，点下方「排盘」即可</div>
+    </div>
+    <div class="action-area">
+        <button class="primary-btn" id="shakeBtn">摇 卦</button>
+        <button class="secondary-btn" id="completeBtn" disabled>排 盘</button>
+        <button class="secondary-btn" id="interpretBtn" disabled>释 卦</button>
+    </div>
+    <div id="resultArea">
+        <div class="result-placeholder">静心凝神，摇动铜钱，以决疑事</div>
+    </div>
+    <div class="footer-note">📖 以《增删卜易》为宗 · 浑天甲子纳甲 · 六爻排盘</div>
+</div>
+
+<!-- 依赖加载顺序：lunar.js → shuju.js → suanfa.js → zhukong.js -->
+<script src="./ly/lunar.js"></script>
+<script src="ly/shuju.js"></script>
+<script src="ly/suanfa.js"></script>
+<script src="ly/zhukong.js"></script>
+<script>
+// ===== 手动输卦时间增强（rw 补丁：jiegou.html 时间字段）=====
+// 仅 jiegou.html 内联脚本；不改 suanfa.js / zhukong.js / qwen.js 地基。
+// 复刻 wnl.html 真太阳时计算（lunar.js 库），初始化填入当前值；
+// 排盘时（手动模式）把 timeInfo 回写 currentGua.guaData，供 jiegua.html rw7 使用。
+(function () {
+    const GAN = ['甲', '乙', '丙', '丁', '戊', '己', '庚', '辛', '壬', '癸'];
+    const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+    const YUE_ZHI = ['寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥', '子', '丑'];
+
+    const selYear = document.getElementById('selYear');
+    const selMonth = document.getElementById('selMonth');
+    const selDay = document.getElementById('selDay');
+    const selHour = document.getElementById('selHour');
+
+    function jiaZi60() {
+        const a = [];
+        for (let i = 0; i < 60; i++) a.push(GAN[i % 10] + ZHI[i % 12]);
+        return a;
+    }
+
+    // 当前真太阳时（与 wnl.html 同口径：lunar.js 取年月日干支 + 时辰分支）
+    function getNowTimeInfo() {
+        const now = new Date();
+        let lunar = null;
+        try { lunar = Solar.fromDate(now).getLunar(); } catch (e) { lunar = null; }
+        const nianGanZhi = lunar ? lunar.getYearInGanZhi() : '';
+        const yueJian = lunar ? lunar.getMonthZhi() : '';
+        const riChen = lunar ? lunar.getDayInGanZhi() : '';
+        const h = now.getHours();
+        const shiIdx = (h >= 23 || h < 1) ? 0 : Math.floor(h / 2);
+        const shiChen = ZHI[shiIdx];
+        return { nianGanZhi: nianGanZhi, yueJian: yueJian, riChen: riChen, shiChen: shiChen };
+    }
+
+    // 由日干支推旬空（统一走 lunar.js LunarUtil.getXunKong，与 wnl.html 同源）
+    function xunKongOf(riChen) {
+        if (!riChen || riChen.length < 2) return '';
+        try {
+            return LunarUtil.getXunKong(riChen);
+        } catch (e) {
+            return '';
+        }
+    }
+
+    function assembleTimeInfo(y, m, d, h) {
+        return {
+            nianGanZhi: y || '',
+            yueJian: m || '',
+            riChen: d || '',
+            xunKong: xunKongOf(d),
+            shiChen: h || '',
+            solarTime: '手动输入 ' + y + '年 ' + m + '月 ' + d + '日 ' + h + '时',
+            lunarTime: y + '年 ' + m + '月 ' + d + '日'
+        };
+    }
+
+    function fillSelect(sel, arr, selected) {
+        sel.innerHTML = '<option value="">（留空=自动）</option>' +
+            arr.map(v => '<option value="' + v + '"' + (v === selected ? ' selected' : '') + '>' + v + '</option>').join('');
+    }
+
+    function initTimeSelectors() {
+        const now = getNowTimeInfo();
+        fillSelect(selYear, jiaZi60(), now.nianGanZhi);
+        fillSelect(selMonth, YUE_ZHI, now.yueJian);
+        fillSelect(selDay, jiaZi60(), now.riChen);
+        fillSelect(selHour, ZHI, now.shiChen);
+    }
+
+    // 排盘后回写：仅手动模式 + 六爻已填，才把 timeInfo 写入 currentGua
+    function applyManualTimeInfo() {
+        const modeInputBtn = document.getElementById('modeInputBtn');
+        const isManual = modeInputBtn && modeInputBtn.classList.contains('active');
+        if (!isManual) return;
+
+        const yaoInputContainer = document.getElementById('yaoInputContainer');
+        const sels = yaoInputContainer ? yaoInputContainer.querySelectorAll('select') : [];
+        if (sels.length !== 6) return;
+        let allYao = true;
+        sels.forEach(s => { if (!s.value) allYao = false; });
+        if (!allYao) return; // 排盘未成功，不注入
+
+        let y = selYear.value, m = selMonth.value, d = selDay.value, h = selHour.value;
+        if (!y || !m || !d || !h) {
+            const now = getNowTimeInfo();
+            y = y || now.nianGanZhi; m = m || now.yueJian;
+            d = d || now.riChen; h = h || now.shiChen;
+        }
+        const ti = assembleTimeInfo(y, m, d, h);
+        try {
+            const raw = localStorage.getItem('currentGua');
+            if (!raw) return;
+            const gd = JSON.parse(raw);
+            gd.timeInfo = ti;
+            localStorage.setItem('currentGua', JSON.stringify(gd));
+            try { sessionStorage.setItem('currentGua', JSON.stringify(gd)); } catch (e2) {}
+            console.log('✅ 手动输卦 timeInfo 已写入 currentGua', ti);
+        } catch (e) { console.warn('手动 timeInfo 写入失败:', e); }
+    }
+
+    if (selYear) initTimeSelectors();
+    const completeBtn = document.getElementById('completeBtn');
+    if (completeBtn) completeBtn.addEventListener('click', applyManualTimeInfo);
+
+    // ===== rw7 内联角标注入（排盘页每爻行旁显示月破/日破/暗动/真空/假空）=====
+    // 在 renderFinalResult 渲染 .yao-row 之后执行，从 currentGua 读取数据，
+    // 调用 suanfa.js 的 5 个 rw7 函数计算，再注入高对比度角标到每爻行 DOM。
+    // 不改 zhukong.js / suanfa.js 地基。
+    function injectRw7InlineMarks() {
+        var rows = document.querySelectorAll('.yao-row');
+        if (!rows || rows.length === 0) return;
+
+        try {
+            var raw = localStorage.getItem('currentGua');
+            if (!raw) return;
+            var gd = JSON.parse(raw);
+            if (!gd || !gd.benYao) return;
+
+            // 构造 timeInfo（优先手动输入，否则当前时间）
+            var ti = gd.timeInfo || null;
+            if (!ti || !ti.yueJian) {
+                try {
+                    var now2 = new Date();
+                    var lunar2 = Solar.fromDate(now2).getLunar();
+                    var h2 = now2.getHours();
+                    var si2 = (h2 >= 23 || h2 < 1) ? 0 : Math.floor(h2 / 2);
+                    ti = {
+                        yueJian: lunar2.getMonthZhi(),
+                        riChen: lunar2.getDayInGanZhi(),
+                        xunKong: lunar2.getDayXunKong()
+                    };
+                } catch (e3) { ti = { yueJian: '', riChen: '', xunKong: '' }; }
+            }
+
+            // 构造 guaInfo（与 jiegua.html 同构）
+            var guaInfo = {
+                yaoDetail: (gd.benYao || []).map(function (yao, idx) {
+                    var r = { dizhi: yao.地支, liuqin: yao.六亲, isDong: false };
+                    if (gd.dongStatus && gd.dongStatus[idx]) r.isDong = true;
+                    if (gd.bianYao && gd.bianYao[idx]) { r.bianDizhi = gd.bianYao[idx].地支; r.bianLiuqin = gd.bianYao[idx].六亲; }
+                    return r;
+                }),
+                fuShenList: [],
+                shiYaoIndex: gd.shiYao || null,
+                timeInfo: ti
+            };
+            // 伏神映射
+            if (Array.isArray(gd.benFuShen)) {
+                guaInfo.fuShenList = gd.benFuShen.map(function (f) {
+                    return { liuqin: f.fuShenLiuQin, dizhi: f.fuShenDizhi, yaoWei: f.fuShenYaoWei, isKong: false };
+                });
+            }
+
+            // 调用 5 个 rw7 函数（suanfa.js 已全局加载）
+            if (typeof jiSuanYuePo === 'function') jiSuanYuePo(guaInfo);
+            if (typeof jiSuanRiPoAnDong === 'function') jiSuanRiPoAnDong(guaInfo);
+            if (typeof jiSuanZhenKongJiaKong === 'function') jiSuanZhenKongJiaKong(guaInfo);
+            if (typeof jiSuanShiYaoZhuangTai === 'function') jiSuanShiYaoZhuangTai(guaInfo);
+
+            // 注入内联角标到每爻行
+            var style = 'display:inline-block;margin-left:6px;padding:1px 7px;border-radius:8px;font-size:11px;font-weight:bold;vertical-align:middle;letter-spacing:0.5px;';
+            var marks = {
+                yuePo:   { text: '月破', css: style + 'background:#c0392b;color:#fff;border:1px solid #e6b0aa;' },
+                riPo:    { text: '日破', css: style + 'background:#2471a3;color:#fff;border:1px solid #aed6f1;' },
+                anDong:  { text: '暗动', css: style + 'background:#1abc9c;color:#fff;border:1px solid #a3e4d7;' },
+                zhenKong:{ text: '真空', css: style + 'background:#7f8c8d;color:#fff;border:1px solid #bdc3c7;' },
+                jiaKong: { text: '假空', css: style + 'background:#d4ac0d;color:#fff;border:1px solid #f9e79f;' }
+            };
+
+            // 角标优先级（高→低）：月破 > 日破 > 暗动 > 真空 > 假空
+            // 每爻只挂最高优先级的一个标，禁止双标并存
+            var PRIORITY = ['yuePo','riPo','anDong','zhenKong','jiaKong'];
+
+            (guaInfo.yaoDetail || []).forEach(function (y, i) {
+                if (i >= rows.length) return;
+                var row = rows[i];
+                var tags = [];
+                // 按优先级遍历，命中第一个即停止
+                for (var pi = 0; pi < PRIORITY.length; pi++) {
+                    var key = PRIORITY[pi];
+                    if (key === 'yuePo' && y.yuePo) { tags.push(marks.yuePo); break; }
+                    if (key === 'riPo' && y.riPoOrAnDong && y.riPoOrAnDong === '日破') { tags.push(marks.riPo); break; }
+                    if (key === 'anDong' && y.riPoOrAnDong && y.riPoOrAnDong === '暗动') { tags.push(marks.anDong); break; }
+                    if (key === 'zhenKong' && y.kongType && y.kongType === '真空') { tags.push(marks.zhenKong); break; }
+                    if (key === 'jiaKong' && y.kongType && y.kongType === '假空') { tags.push(marks.jiaKong); break; }
+                }
+                if (tags.length > 0) {
+                    var html = tags.map(function (m) { return '<span style="' + m.css + '">' + m.text + '</span>'; }).join('');
+                    var anchor = row.querySelector('.yao-dong-mark') || row.querySelector('.yao-shiying') || row.lastElementChild;
+                    if (anchor) anchor.insertAdjacentHTML('afterend', html);
+                    else row.insertAdjacentHTML('beforeend', html);
+                }
+            });
+
+            console.log('✅ rw7 内联角标已注入排盘页（' + rows.length + '爻）');
+        } catch (e) { console.warn('rw7 内联角标注入失败:', e); }
+    }
+
+    // 排盘后注入（等 zhukong.js 的 renderFinalResult 先完成）
+    if (completeBtn) completeBtn.addEventListener('click', function () { setTimeout(injectRw7InlineMarks, 50); });
+
+    // rw9bd 第二刀：净化释卦跳转——数据藏 localStorage，URL 仅携带唯一 id
+    // 杜绝 guaData 序列化塞入 URL 导致的链接冗长与数据泄露风险
+    const jieguaLink = document.getElementById('jieguaLink');
+    if (jieguaLink) {
+        jieguaLink.addEventListener('click', function (e) {
+            const raw = localStorage.getItem('currentGua');
+            if (!raw) return; // 无数据则放行默认链接，由 jiegua.html 兜底
+            try {
+                const id = Date.now();
+                localStorage.setItem('gua_' + id, raw);
+                e.preventDefault();
+                location.href = 'jiegua.html?id=' + id;
+            } catch (err) {
+                console.warn('rw9 净化跳转存储失败，回退默认链接:', err);
+            }
+        });
+    }
+
+    // ===== 天时通鉴·回马枪：接收 tstj_timeInfo，预填手动输卦时间 =====
+    // 从 wnl.html 点击"以此时间起卦"后跳转 jiegou.html?from=tstj，
+    // 读取 localStorage.tstj_timeInfo，预填手动输卦区时间下拉框。
+    function receiveTstjTimeInfo() {
+        var search = location.search;
+        if (!search) return;
+        var params = new URLSearchParams(search);
+        if (params.get('from') !== 'tstj') return;
+
+        var raw = null;
+        try { raw = localStorage.getItem('tstj_timeInfo'); } catch (e) { return; }
+        if (!raw) return;
+
+        var ti = null;
+        try { ti = JSON.parse(raw); } catch (e) { return; }
+        if (!ti || !ti.riChen) return;
+
+        // 切换到手动输卦模式
+        var modeInputBtn = document.getElementById('modeInputBtn');
+        var modeCoinBtn = document.getElementById('modeCoinBtn');
+        if (modeInputBtn && !modeInputBtn.classList.contains('active')) {
+            modeInputBtn.click();
+        }
+
+        // 预填时间下拉框
+        var selY = document.getElementById('selYear');
+        var selM = document.getElementById('selMonth');
+        var selD = document.getElementById('selDay');
+        var selH = document.getElementById('selHour');
+
+        // 等待下拉框填充完成后设置选中值
+        setTimeout(function() {
+            if (ti.nianGanZhi && selY) {
+                // 在六十甲子中找到匹配项
+                for (var i = 0; i < selY.options.length; i++) {
+                    if (selY.options[i].value === ti.nianGanZhi) {
+                        selY.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (ti.yueJian && selM) {
+                for (var i = 0; i < selM.options.length; i++) {
+                    if (selM.options[i].value === ti.yueJian) {
+                        selM.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (ti.riChen && selD) {
+                for (var i = 0; i < selD.options.length; i++) {
+                    if (selD.options[i].value === ti.riChen) {
+                        selD.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+            if (ti.shiChen && selH) {
+                for (var i = 0; i < selH.options.length; i++) {
+                    if (selH.options[i].value === ti.shiChen) {
+                        selH.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+
+            // 消费后删除
+            try { localStorage.removeItem('tstj_timeInfo'); } catch (e) {}
+
+            // 显示提示
+            var hint = document.createElement('div');
+            hint.style.cssText = 'position:fixed;top:16px;left:50%;transform:translateX(-50%);background:#2d7a3d;color:#fff;padding:10px 24px;border-radius:30px;font-size:14px;z-index:9999;box-shadow:0 4px 12px rgba(0,0,0,0.3);letter-spacing:1px;';
+            hint.textContent = '✅ 已从天时通鉴载入时间参数：' + ti.riChen + '日 ' + ti.shiChen + '时';
+            document.body.appendChild(hint);
+            setTimeout(function() { hint.style.transition = 'opacity 0.5s'; hint.style.opacity = '0'; }, 3000);
+            setTimeout(function() { if (hint.parentNode) hint.parentNode.removeChild(hint); }, 3600);
+
+            console.log('✅ 天时通鉴 timeInfo 已载入:', ti);
+        }, 100);
+    }
+
+    // 页面加载后执行接收逻辑（等 zhukong.js 初始化完成）
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() { setTimeout(receiveTstjTimeInfo, 200); });
+    } else {
+        setTimeout(receiveTstjTimeInfo, 200);
+    }
+})();
+</script>
+</body>
+</html>

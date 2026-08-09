@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>增删卜易 · 六爻占卜系统</title>
+<style>
+  :root{
+    --ink:#2c2417; --gold:#9a7b3f; --paper:#f7f1e3; --line:#d9c9a3;
+    --card:#fffdf6; --accent:#7a1f1f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:"Songti SC","SimSun",serif;
+    background:var(--paper); color:var(--ink);
+    min-height:100vh; display:flex; flex-direction:column; align-items:center;
+    padding:48px 20px;
+  }
+  .masthead{text-align:center; margin-bottom:36px}
+  .masthead h1{font-size:34px; letter-spacing:6px; color:var(--accent)}
+  .masthead p{margin-top:10px; color:var(--gold); font-size:14px; letter-spacing:2px}
+  .grid{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:18px; width:100%; max-width:880px;
+  }
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:24px 22px; text-decoration:none; color:var(--ink);
+    transition:transform .15s ease, box-shadow .15s ease;
+    box-shadow:0 2px 6px rgba(120,90,30,.08);
+  }
+  .card:hover{transform:translateY(-3px); box-shadow:0 8px 20px rgba(120,90,30,.16)}
+  .card .ico{font-size:26px}
+  .card h2{font-size:19px; margin:12px 0 6px; color:var(--accent); letter-spacing:1px}
+  .card p{font-size:13px; color:#6b5d44; line-height:1.6}
+  .foot{margin-top:40px; font-size:12px; color:var(--gold)}
+  .foot a{color:var(--gold); text-decoration:none; border-bottom:1px dashed var(--gold)}
+</style>
+</head>
+<body>
+  <div class="masthead">
+    <h1>增删卜易</h1>
+    <p>六爻占卜系统 · 以《增删卜易》为宗</p>
+  </div>
+
+  <div class="grid">
+    <a class="card" href="jiegou.html">
+      <div class="ico">☯</div>
+      <h2>起卦</h2>
+      <p>铜钱摇卦 / 手动输卦，八宫纳甲排盘，本卦变卦世应动爻一目了然。</p>
+    </a>
+    <a class="card" href="jiegua.html">
+      <div class="ico">📜</div>
+      <h2>释卦</h2>
+      <p>AI 解读卦象，旺衰格局、用神取舍、应期提示，古法推演供参考。</p>
+    </a>
+    <a class="card" href="wnl.html">
+      <div class="ico">📅</div>
+      <h2>万年历</h2>
+      <p>农历干支、节气旬空、真太阳时、断卦参数，通书随身。</p>
+    </a>
+    <a class="card" href="history.html">
+      <div class="ico">📚</div>
+      <h2>历史</h2>
+      <p>历次占验记录（本地存储），折叠检索，便于复盘。</p>
+    </a>
+    <a class="card" href="help.html">
+      <div class="ico">❓</div>
+      <h2>使用指南</h2>
+      <p>起卦、排盘、释卦全流程说明与注意事项。</p>
+    </a>
+  </div>
+
+  <div class="foot">
+    子系统独立运行 · <a href="https://dxwj.pages.dev/index1.html">返回道玄文集</a>
+  </div>
+</body>
+</html>

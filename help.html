@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>使用指南 · 增删卜易</title>
+    <style>
+        /* 与主页面风格一致的样式 */
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Georgia', 'Times New Roman', serif;
+            background: #e8f1f2;
+            background-image:
+                radial-gradient(ellipse at 20% 50%, rgba(205, 224, 228, 0.5) 0%, transparent 60%),
+                radial-gradient(ellipse at 80% 50%, rgba(212, 228, 232, 0.4) 0%, transparent 50%),
+                radial-gradient(ellipse at 50% 100%, rgba(195, 216, 220, 0.45) 0%, transparent 40%),
+                radial-gradient(ellipse at 50% 0%, rgba(210, 226, 230, 0.35) 0%, transparent 30%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+        }
+
+        /* 太极阴阳鱼背景装饰 */
+        body::before {
+            content: '☯';
+            position: fixed;
+            font-size: 300px;
+            color: rgba(255, 248, 240, 0.04);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            animation: taijiSpin 60s linear infinite;
+        }
+
+        @keyframes taijiSpin {
+            0% { transform: translate(-50%, -50%) rotate(0deg) scale(1.2); }
+            100% { transform: translate(-50%, -50%) rotate(360deg) scale(1.2); }
+        }
+
+        /* 星点闪烁 */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-image:
+                radial-gradient(2px 2px at 10% 20%, rgba(255,255,240,0.15), transparent),
+                radial-gradient(2px 2px at 30% 60%, rgba(255,255,240,0.1), transparent),
+                radial-gradient(1px 1px at 50% 10%, rgba(255,255,240,0.2), transparent),
+                radial-gradient(2px 2px at 70% 40%, rgba(255,255,240,0.12), transparent),
+                radial-gradient(1px 1px at 90% 80%, rgba(255,255,240,0.18), transparent),
+                radial-gradient(1px 1px at 15% 85%, rgba(255,255,240,0.08), transparent),
+                radial-gradient(2px 2px at 60% 90%, rgba(255,255,240,0.1), transparent),
+                radial-gradient(1px 1px at 85% 15%, rgba(255,255,240,0.15), transparent);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 840px;
+            width: 100%;
+            background: rgba(246, 239, 230, 0.92);
+            backdrop-filter: blur(12px);
+            padding: 30px 30px 40px;
+            border-radius: 48px 48px 32px 32px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.8), 0 0 0 1px #6b5a48 inset, 0 0 0 2px #bcab97 inset;
+            border: 1px solid #c9b9a5;
+        }
+        h1 {
+            font-size: 26px;
+            text-align: center;
+            font-weight: normal;
+            letter-spacing: 8px;
+            color: #3f2e1e;
+            border-bottom: 2px solid #cbb8a4;
+            padding-bottom: 15px;
+            margin-bottom: 20px;
+        }
+        .nav-bar {
+            display: flex;
+            justify-content: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .nav-bar a {
+            color: #6b4f39;
+            text-decoration: none;
+            padding: 6px 18px;
+            border-radius: 30px;
+            background: #ede3d7;
+            border: 1px solid #d5c6b4;
+            font-size: 14px;
+            transition: 0.2s;
+        }
+        .nav-bar a:hover { background: #d5c6b4; }
+        .nav-bar a.active { background: #6b4f39; color: #f5ede4; border-color: #6b4f39; }
+        .nav-bar a.external-link { background: #ede3d7; color: #6b4f39; border-color: #d5c6b4; }
+        .nav-bar a.external-link:hover { background: #d5c6b4; color: #3f2e1e; border-color: #c2b39c; }
+        .help-section {
+            background: #fcf8f0;
+            border-radius: 16px;
+            padding: 18px 22px;
+            margin-bottom: 14px;
+            border: 1px solid #d5c6b4;
+        }
+        .help-section h3 {
+            color: #3f2e1e;
+            font-size: 18px;
+            margin-bottom: 8px;
+            border-bottom: 1px solid #e8ddd0;
+            padding-bottom: 6px;
+        }
+        .help-section p, .help-section li {
+            color: #3c2e22;
+            font-size: 15px;
+            line-height: 1.8;
+        }
+        .help-section ul {
+            padding-left: 20px;
+        }
+        .help-section .tip {
+            background: #ede3d7;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-top: 8px;
+            font-size: 14px;
+            color: #6b5844;
+            border-left: 4px solid #b09a84;
+        }
+        .footer-note {
+            margin-top: 20px;
+            font-size: 12px;
+            color: #a48d78;
+            text-align: center;
+            border-top: 1px solid #e0d3c4;
+            padding-top: 16px;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 500px) {
+            body { padding: 4px; }
+            .container { padding: 8px; border-radius: 24px 24px 16px 16px; }
+            h1 { font-size: 20px; letter-spacing: 4px; }
+            /* 导航栏统一 3+3：每个按钮占 1/3 宽度，居中 */
+            .nav-bar { gap: 6px; justify-content: center; }
+            .nav-bar a {
+                flex: 1 1 calc(33.33% - 8px);
+                text-align: center;
+                min-width: 0;
+                font-size: 12px;
+                padding: 6px 4px;
+            }
+            .help-section { padding: 14px; }
+            .help-section h3 { font-size: 15px; }
+        }
+
+        @media (max-width: 400px) {
+            body { padding: 2px; }
+            .container { padding: 6px; }
+            h1 { font-size: 17px; letter-spacing: 2px; }
+            .nav-bar a { font-size: 11px; padding: 5px 3px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>❓ 使用 · 指南</h1>
+    <div class="nav-bar">
+        <a href="jiegou.html">🔮 起卦</a>
+        <a href="jiegua.html">📜 释卦</a>
+        <a href="history.html">📖 历史</a>
+        <a href="help.html" class="active">❓ 指南</a>
+        <a href="wnl.html" title="万年历">🗓️ 万年历</a>
+        <a href="https://dxwj.pages.dev/index1.html" target="_blank" class="external-link" title="返回道玄文集">🏠 文集</a>
+    </div>
+
+    <div class="help-section">
+        <h3>🔮 第一步：起卦</h3>
+        <p>点击 <strong>「摇卦」</strong> 按钮，系统会模拟三枚铜钱投掷。</p>
+        <ul>
+            <li>每次摇卦生成一爻，共摇 <strong>6 次</strong>，从下往上排列</li>
+            <li>⚊ 代表阳爻，⚋ 代表阴爻</li>
+            <li>出现 <strong>○</strong>（老阳）或 <strong>×</strong>（老阴）表示动爻</li>
+        </ul>
+        <div class="tip">💡 摇卦前请静心凝神，心中默念所问之事</div>
+    </div>
+
+    <div class="help-section">
+        <h3>📜 第二步：排盘</h3>
+        <p>六爻摇满后，点击 <strong>「完卦」</strong>，系统自动识别本卦和变卦。</p>
+        <ul>
+            <li><strong>本卦</strong>：六爻摇出的初始卦象</li>
+            <li><strong>变卦</strong>：动爻变化后的卦象</li>
+            <li>卦象下方会显示 <strong>世应</strong> 位置和 <strong>六亲</strong></li>
+        </ul>
+        <div class="tip">💡 点击 <strong>「重起」</strong> 可重新开始</div>
+    </div>
+
+    <div class="help-section">
+        <h3>🧠 第三步：AI释卦</h3>
+        <p>点击 <strong>「释卦」</strong> 按钮，AI将以《增删卜易》理论为您解读。</p>
+        <ul>
+            <li>支持 <strong>千问 3.7</strong>（默认主力）和 <strong>千问备选</strong>（qwen3.7-flash）两种模型</li>
+            <li>建议在起卦页面 <strong>填写所问之事</strong>，帮助AI精准分析</li>
+            <li>AI会分析用神、世应、五行生克，给出结论</li>
+        </ul>
+        <div class="tip">💡 释卦结果仅供参考，决策还需理性判断</div>
+    </div>
+
+    <div class="help-section">
+        <h3>📖 第四步：查看历史</h3>
+        <p>所有占卜记录自动保存在本地浏览器中。</p>
+        <ul>
+            <li>点击 <strong>「历史」</strong> 查看过往占卜记录</li>
+            <li>可随时 <strong>清空</strong> 历史记录</li>
+        </ul>
+        <div class="tip">💡 历史记录保存在本地，清除浏览器缓存会丢失</div>
+    </div>
+
+    <div class="help-section">
+        <h3>⚙️ 配置说明</h3>
+        <p>AI 解卦密钥存放在网站后端（Cloudflare 环境变量），前端页面不包含任何密钥。若站长需要更换密钥：</p>
+        <ul>
+            <li><strong>千问 3.7 / 千问备选</strong>：从 <a href="https://bailian.console.aliyun.com/" target="_blank">阿里云百炼平台</a> 获取 API Key</li>
+            <li>在 Cloudflare 控制台 → Pages 项目 → Settings → Environment variables 中更新 <code>QWEN_API_KEY</code> / <code>QWEN2_API_KEY</code>，保存后重新部署生效</li>
+        </ul>
+        <div class="tip">💡 不配置API密钥，仅起卦和排盘功能也可正常使用</div>
+    </div>
+
+    <div class="footer-note">📖 以《增删卜易》为宗 · 野鹤老人遗风</div>
+</div>
+</body>
+</html>
