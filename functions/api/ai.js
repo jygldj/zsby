@@ -33,6 +33,7 @@ const CORS = {
 const ALLOWED_ORIGINS = [
   'https://dxwj.pages.dev',
   'https://zsby.pages.dev',
+  'https://dxzsby.pages.dev',
   'http://localhost',
   'http://127.0.0.1',
 ];
