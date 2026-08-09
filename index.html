@@ -28,7 +28,7 @@
   /* 太极阴阳鱼：置于卡片上层、透明淡显、不拦截点击 */
   body::before{
     content:'☯';
-    position:fixed; font-size:126px; color:rgba(122, 31, 31, 0.2);
+    position:fixed; font-size:164px; color:rgba(122, 31, 31, 0.2);
     top:50%; left:50%; transform:translate(-50%,-50%) scale(1.4);
     pointer-events:none; z-index:3; animation:taijiSpin 60s linear infinite;
   }
@@ -40,20 +40,22 @@
   body::after{
     content:''; position:fixed; top:0; left:0; right:0; bottom:0; z-index:3;
     background-image:
-      radial-gradient(4px 4px at 8% 18%, rgba(214,175,60,1), transparent),
-      radial-gradient(3px 3px at 22% 55%, rgba(214,175,60,0.95), transparent),
-      radial-gradient(3px 3px at 40% 12%, rgba(214,175,60,1), transparent),
-      radial-gradient(4px 4px at 58% 38%, rgba(214,175,60,0.9), transparent),
-      radial-gradient(3px 3px at 72% 70%, rgba(214,175,60,1), transparent),
-      radial-gradient(3px 3px at 88% 28%, rgba(214,175,60,0.95), transparent),
-      radial-gradient(4px 4px at 33% 82%, rgba(214,175,60,0.9), transparent),
-      radial-gradient(3px 3px at 65% 90%, rgba(214,175,60,1), transparent),
-      radial-gradient(3px 3px at 93% 62%, rgba(214,175,60,0.95), transparent),
-      radial-gradient(2.5px 2.5px at 15% 40%, rgba(214,175,60,0.9), transparent);
+      radial-gradient(6px 6px at 6% 15%, rgba(180,120,25,1), transparent),
+      radial-gradient(4px 4px at 20% 50%, rgba(210,160,50,1), transparent),
+      radial-gradient(5px 5px at 38% 10%, rgba(180,120,25,1), transparent),
+      radial-gradient(6px 6px at 55% 35%, rgba(210,160,50,0.95), transparent),
+      radial-gradient(4px 4px at 72% 68%, rgba(180,120,25,1), transparent),
+      radial-gradient(5px 5px at 88% 25%, rgba(210,160,50,1), transparent),
+      radial-gradient(6px 6px at 30% 80%, rgba(180,120,25,0.95), transparent),
+      radial-gradient(4px 4px at 63% 92%, rgba(210,160,50,1), transparent),
+      radial-gradient(5px 5px at 92% 60%, rgba(180,120,25,1), transparent),
+      radial-gradient(4px 4px at 12% 38%, rgba(210,160,50,0.95), transparent),
+      radial-gradient(5px 5px at 47% 62%, rgba(180,120,25,1), transparent),
+      radial-gradient(4px 4px at 80% 45%, rgba(210,160,50,0.95), transparent);
     pointer-events:none; animation:starTwinkle 4s ease-in-out infinite;
   }
   @keyframes starTwinkle{
-    0%,100%{opacity:.85}
+    0%,100%{opacity:.9}
     50%{opacity:1}
   }
   /* 居中内容列，浮于背景装饰之下（装饰 z-index:3 位于其上） */
