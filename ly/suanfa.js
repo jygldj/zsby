@@ -716,7 +716,7 @@ function xuanYongShen(guaInfo, questionType) {
     const fuList = guaInfo.fuShenList || [];
 
     if (!yongShenLiuqin) {
-        guaInfo.yongShen = { liuqin:null, positions:[], primaryIndex:null, reason:'未知所问之事，无法定用神', priority:[], wangShuaiScore:{index:0,detail:'无'} };
+        guaInfo.yongShen = { liuqin:null, positions:[], primaryIndex:null, dizhi:null, reason:'未知所问之事，无法定用神', priority:[], wangShuaiScore:{index:0,detail:'无'} };
         return guaInfo;
     }
 
@@ -732,19 +732,20 @@ function xuanYongShen(guaInfo, questionType) {
             const fuYao = { dizhi:fuItem.地支, liuqin:fuItem.六亲, isDong:false, isFuShen:true,
                 feiRelation:fuShenRelationRW8(feiWx, fuWx), kongType:fuItem.kongType || 'none' };
             const sc = jiWangShuaiScore(fuYao, guaInfo);
-            guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:['伏神'], primaryIndex:'伏'+(fuItem.伏神爻位||''),
+            guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:['伏神'], primaryIndex:'伏'+(fuItem.伏神爻位||''), dizhi: fuItem.地支,
                 reason:'用神不现，取伏神' + yongShenNote, priority:[{pos:'伏',score:sc.score,detail:sc.detail}],
                 wangShuaiScore:{index:sc.score,detail:sc.detail} };
             return guaInfo;
         }
-        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:[], primaryIndex:null, reason:'用神不现（本卦与伏神皆无）' + yongShenNote, priority:[], wangShuaiScore:{index:0,detail:'无'} };
+        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:[], primaryIndex:null, dizhi:null, reason:'用神不现（本卦与伏神皆无）' + yongShenNote, priority:[], wangShuaiScore:{index:0,detail:'无'} };
         return guaInfo;
     }
 
     if (positions.length === 1) {
         const idx = positions[0];
         const sc = jiWangShuaiScore(yaoDetail[idx - 1], guaInfo);
-        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:positions, primaryIndex:idx, reason:'用神独现' + yongShenNote,
+        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:positions, primaryIndex:idx, dizhi:yaoDetail[idx - 1].dizhi,
+            reason:'用神独现' + yongShenNote,
             priority:[{pos:idx,score:sc.score,detail:sc.detail}], wangShuaiScore:{index:sc.score,detail:sc.detail} };
         return guaInfo;
     }
@@ -799,6 +800,7 @@ function xuanYongShen(guaInfo, questionType) {
         liuqin: yongShenLiuqin,
         positions: positions,
         primaryIndex: chosen.idx,
+        dizhi: yaoDetail[chosen.idx - 1].dizhi,
         reason: reason + yongShenNote,
         priority: items.map(it => ({ pos:it.idx, score:it.sc.score, detail:it.sc.detail })),
         wangShuaiScore: { index:chosen.sc.score, detail:chosen.sc.detail }
@@ -1241,5 +1243,146 @@ function tuiYingQi(guaInfo, startDate) {
         console.warn('应期引擎失败:', e);
         guaInfo.yingqi = null;
     }
+    return guaInfo;
+}
+
+// ============================================================
+// 十三、阶段3：吉凶判定引擎（R2-1 结构化断卦依据链）
+// 依据：《增删卜易》用神章/旺衰章/动静章/世应章/忌仇神章/六冲六合章/反伏章/墓绝章
+// 依序执行 7 步：定用神 → 察旺衰 → 观动静 → 审世应 → 看忌仇元神 → 察卦象 → 综合结论。
+// 每步输出 {判据, 结论, 依据} 三元组并入 guaInfo.duanGua.chain；
+// 计分制汇总 guaInfo.duanGua.jiXiong ∈ {吉,中,凶}；数据缺失跳过该判据并注明。
+// 前置：须先经 xuanYongShen、jiShenChouShen、jiSuanYuanShenKongFu、
+//       jiSuanShiYaoZhuangTai、suanQuanBuGuaXiang。
+// ============================================================
+
+function suanDuanGua(guaInfo) {
+    const chain = [];
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const guaXiang = guaInfo.guaXiang || {};
+    const timeInfo = guaInfo.timeInfo || {};
+    const yueJian = timeInfo.yueJian || '';
+    const riChen = timeInfo.riChen || '';
+    const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
+    const yongShen = guaInfo.yongShen || null;
+    let score = 0;
+
+    function add(jueJu, jieLun, yiJu) {
+        chain.push({ jueJu: jueJu, jieLun: jieLun || '', yiJu: yiJu || '数据缺失，跳过该判据' });
+    }
+
+    // 步1 定用神
+    if (yongShen && yongShen.liuqin) {
+        let pos = '卦中';
+        if (typeof yongShen.primaryIndex === 'number') pos = '第' + yongShen.primaryIndex + '爻';
+        else if (String(yongShen.primaryIndex || '').indexOf('伏') === 0) pos = '伏神';
+        add('定用神', '取' + pos + ' ' + yongShen.liuqin + (yongShen.dizhi ? '(' + yongShen.dizhi + ')' : '') + '为用', yongShen.reason || '按门类映射取用');
+    } else {
+        add('定用神', '用神未定', '未命中门类映射或所问不明，后续判据受限');
+    }
+
+    const yongYao = (yongShen && typeof yongShen.primaryIndex === 'number' && yaoDetail[yongShen.primaryIndex - 1]) || null;
+
+    // 步2 察旺衰
+    if (yongYao) {
+        const sc = jiWangShuaiScore(yongYao, guaInfo);
+        const wangShuai = sc.score > 0 ? '旺相' : (sc.score < 0 ? '休囚' : '平');
+        add('察旺衰', '用神' + yongYao.dizhi + ' ' + wangShuai + '(评分' + sc.score + ')', sc.detail || '月日生克综合');
+        score += (sc.score > 0 ? 1 : (sc.score < 0 ? -1 : 0));
+        if (yongYao.yuePo) { add('察旺衰', '用神月破', '月建' + yueJian + '冲' + yongYao.dizhi + '，根枯难用'); score--; }
+        if (yongYao.kongType && yongYao.kongType !== 'none') { add('察旺衰', '用神旬空', '逢空，事成须待出空'); score--; }
+    } else if (yongShen && yongShen.dizhi) {
+        add('察旺衰', '用神伏藏(' + yongShen.dizhi + ')', '伏神之旺衰以飞伏生克论');
+    } else {
+        add('察旺衰', '无法判定', '用神未定');
+    }
+
+    // 步3 观动静
+    if (guaXiang.duFa === '独发' && guaXiang.duFaYaoIndex) {
+        add('观动静', '独发第' + guaXiang.duFaYaoIndex + '爻为第一参考', '《独发章》：一爻独发，卦象所指最真');
+    }
+    if (yongYao) {
+        if (yongYao.isDong) {
+            const ht = yongYao.huiTou || null;
+            if (ht && ht.type === '化进神') { add('观动静', '用神发动化进', '动而化进神，其力倍增'); score++; }
+            else if (ht && ht.type === '回头生') { add('观动静', '用神发动回头生', '变爻生用神，动而有力'); score++; }
+            else if (ht && (ht.type === '化退神' || ht.type === '回头克' || ht.type === '化墓' || ht.type === '化绝' || ht.type === '化破')) { add('观动静', '用神发动' + ht.type, ht.desc || '动而有损'); score--; }
+            else if (ht && ht.type === '化空') { add('观动静', '用神发动化空', '动而化空，待出空方可应'); }
+            else { add('观动静', '用神发动', '动爻为事之机，随其生克而应'); }
+        } else if (!(guaXiang.duFa === '独发' && yongShen.primaryIndex === guaXiang.duFaYaoIndex)) {
+            add('观动静', '用神安静', '静以待时，看月日生扶');
+        }
+    } else if (guaXiang.duFa !== '独发') {
+        add('观动静', '六爻安静', '事态未动，宜静观其变');
+    }
+    if (yongYao && yongYao.dongSan) { add('观动静', '用神动散', '动而被日冲散，事如风吹火灭'); score--; }
+
+    // 步4 审世应
+    const shiIdx = guaInfo.shiYaoIndex;
+    const yingIdx = guaInfo.yingYaoIndex;
+    if (shiIdx != null && yingIdx != null) {
+        const shiYao = yaoDetail[shiIdx - 1], yingYao = yaoDetail[yingIdx - 1];
+        if (shiYao && yingYao && shiYao.dizhi && yingYao.dizhi) {
+            if (isChongRW7(shiYao.dizhi, yingYao.dizhi)) { add('审世应', '世应相冲', '世应' + shiIdx + '/' + yingIdx + '爻相冲，主事有阻隔难成'); score--; }
+            else if (isHeRW7(shiYao.dizhi, yingYao.dizhi)) { add('审世应', '世应相合', '世应' + shiIdx + '/' + yingIdx + '爻相合，主事易成，和合之象'); score++; }
+            else { add('审世应', '世应无冲合', '世应' + shiIdx + '/' + yingIdx + '爻不冲不合，事无大碍'); }
+        }
+    }
+    if (yongYao && shiIdx != null && yongShen.primaryIndex === shiIdx) {
+        add('审世应', '用神持世', '用神临世爻，所求即在自身，主事易成'); score++;
+    }
+    if (yongYao && yingIdx != null && yongShen.primaryIndex === yingIdx) {
+        add('审世应', '用神临应', '用神临应爻，所求在对方或事体');
+    }
+    if (guaInfo.shiYaoZhuangTai && guaInfo.shiYaoZhuangTai !== '平稳' && guaInfo.shiYaoZhuangTai !== '未知') {
+        add('审世应', '世爻' + guaInfo.shiYaoZhuangTai, guaInfo.shiYaoDetail || '');
+        if (guaInfo.shiYaoZhuangTai.indexOf('月破') !== -1) score--;
+    }
+
+    // 步5 看忌仇元神
+    if (guaInfo.jiShenState && guaInfo.jiShenState.liuqin) {
+        const js = guaInfo.jiShenState;
+        add('看忌仇元神', '忌神' + js.liuqin + (js.positions.length ? ('在第' + js.positions.join('、') + '爻') : ''), js.duanYu || '');
+        if (js.wangShuaiScore && js.wangShuaiScore.index > 0) { add('看忌仇元神', '忌神有力', '忌神旺相克用，防其害'); score--; }
+        else { add('看忌仇元神', '忌神无力', '忌神休囚，克用之力有限'); score++; }
+    } else {
+        add('看忌仇元神', '忌神状态', '未构成明显忌神或数据缺失');
+    }
+    if (guaInfo.chouShenState && guaInfo.chouShenState.liuqin) {
+        const cs = guaInfo.chouShenState;
+        add('看忌仇元神', '仇神' + cs.liuqin, cs.duanYu || '');
+        if (cs.wangShuaiScore && cs.wangShuaiScore.index > 0) score--;
+    }
+    if (guaInfo.yuanShenState) {
+        const ys = guaInfo.yuanShenState;
+        const ysState = ys.isFuCang ? '伏藏' : (ys.isKong ? '旬空' : '得力');
+        add('看忌仇元神', '原神' + (ys.liuqin || '') + ysState, ys.duanYu || '');
+        if (ys.isKong || ys.isFuCang) score--;
+        else score++;
+    } else {
+        add('看忌仇元神', '原神状态', '未计算或数据缺失');
+    }
+
+    // 步6 察卦象
+    if (guaXiang.liuChong) { add('察卦象', '六冲卦', '六冲主散，占久远事不利，主快主凶'); score--; }
+    if (guaXiang.liuHe) { add('察卦象', '六合卦', '六合主合和，占事多顺'); score++; }
+    if (guaXiang.fanYin) { add('察卦象', '反吟', '卦反吟，事多反复，主劳而无功'); score--; }
+    if (guaXiang.fuYin) { add('察卦象', '伏吟', '卦伏吟，事主呻吟迟滞，进退两难'); score--; }
+    if (yongShen && yongShen.dizhi) {
+        const wx = DIZHI_WUXING[yongShen.dizhi] || '';
+        const mu = MU_KU_TABLE[wx];
+        const ruMu = !!(mu && (yueJian === mu || riZhi === mu));
+        if (ruMu) { add('察卦象', '用神入墓', '用神入墓于' + mu + '，事有归藏，待冲墓方出'); score--; }
+        const jue = JUE_WEI_TABLE[wx];
+        const linJue = !!(jue && (yueJian === jue || riZhi === jue));
+        if (linJue) { add('察卦象', '用神临绝', '用神临' + jue + '之绝，气数已尽，事难成'); score--; }
+    }
+    if (guaXiang.duFa === '六爻安静') { add('察卦象', '六爻安静', '事未发动，吉凶未显，待时而动'); }
+
+    // 步7 综合结论
+    const jiXiong = score > 0 ? '吉' : (score < 0 ? '凶' : '中');
+    add('综合结论', jiXiong + '（吉凶评分' + score + '）', chain.slice(0, chain.length - 1).map(c => c.jieLun).join('；'));
+
+    guaInfo.duanGua = { chain: chain, jiXiong: jiXiong, score: score };
     return guaInfo;
 }

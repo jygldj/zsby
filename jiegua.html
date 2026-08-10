@@ -1085,6 +1085,7 @@
                     yingYao: guaData.yingYao ? `第${guaData.yingYao}爻` + (guaData.benYao[guaData.yingYao - 1] ?
                         ` ${guaData.benYao[guaData.yingYao - 1].地支}${guaData.benYao[guaData.yingYao - 1].六亲}` : '') : '未知',
                     shiYaoIndex: guaData.shiYao || null,
+                    yingYaoIndex: guaData.yingYao || null,
 
                     // ⭐ 详细六爻数据（含动变详情）
                     yaoDetail: (guaData.benYao || []).map((yao, idx) => {
@@ -1159,6 +1160,11 @@
                     tuiYingQi(guaInfo);
                 } catch(e) { console.warn('应期引擎失败（不影响主流程）:', e); }
 
+                // ⭐ 阶段3：吉凶判定引擎（7步断卦依据链 → duanGua.chain / jiXiong）
+                try {
+                    suanDuanGua(guaInfo);
+                } catch(e) { console.warn('吉凶判定失败（不影响主流程）:', e); }
+
                 // ⭐ rw7 方案B：把已算好的 rw7 结果 merge 进 guaData，回写 currentGua（供增强版 qwen.js 读取）
                 try {
                     guaData.yuePoList = guaInfo.yuePoList || [];
@@ -1170,6 +1176,7 @@
                     guaData.chouShenState = guaInfo.chouShenState || null;
                     guaData.guaXiang = guaInfo.guaXiang || null;
                     guaData.yingqi = guaInfo.yingqi || null;
+                    guaData.duanGua = guaInfo.duanGua || null;
                     // ⭐ rw9：把 yaoDetail / fuShenList 一并并入 currentGua，供 goZejiForGua 取用神真实地支（含伏神支路）
                     guaData.yaoDetail = guaInfo.yaoDetail || [];
                     guaData.fuShenList = guaInfo.fuShenList || [];
