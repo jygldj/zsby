@@ -43,7 +43,7 @@ const BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 // 模型名映射（只改这里即可切换模型，前端无需变动）
 const MODELS = {
   qwen: 'qwen3.7-flash',
-  qwen2: 'qwen-math-turbo',
+  qwen2: 'qwen-max',
 };
 
 function json(body, status, extra) {
