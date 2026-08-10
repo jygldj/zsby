@@ -1130,3 +1130,116 @@ function suanNaYin(guaInfo) {
     });
     return guaInfo;
 }
+
+// ============================================================
+// 十二、阶段2：应期引擎（R3-1）
+// 依据：《增删卜易·应期总注》
+// 前置：须先经 xuanYongShen（定用神）与 suanQuanBuGuaXiang（卦象/墓绝/进退/独发）。
+// 扫描未来 365 天（含当天，i>0 排除当天），逐日解析公历/干支/月支/旬空，
+// 按用神空/破/墓/合与动爻进退、独发推导应期类型与候选公历日。
+// 输出 guaInfo.yingqi = { items:[{type,yiJu,candidates:[{solar,riChen,monthZhi}]}], primaryType }
+// ============================================================
+
+function tuiYingQi(guaInfo, startDate) {
+    const SolarApi = (typeof globalThis !== 'undefined' && globalThis.Solar) || (typeof Solar !== 'undefined' ? Solar : null);
+    guaInfo.yingqi = null;
+    if (!SolarApi) return guaInfo;
+    try {
+        const yaoDetail = guaInfo.yaoDetail || [];
+        const guaXiang = guaInfo.guaXiang || {};
+        const timeInfo = guaInfo.timeInfo || {};
+        const yueJian = timeInfo.yueJian || '';
+        const riChen = timeInfo.riChen || '';
+        const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
+        const xunKong = timeInfo.xunKong || '';
+        const yongShen = guaInfo.yongShen || null;
+
+        const now = (startDate && startDate.getTime) ? startDate : new Date();
+        const days = [];
+        for (let i = 0; i <= 365; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + i);
+            const solar = SolarApi.fromYmd(d.getFullYear(), d.getMonth() + 1, d.getDate());
+            const lunar = solar.getLunar();
+            const dayGz = lunar.getDayInGanZhi();
+            days.push({
+                y: d.getFullYear(), m: d.getMonth() + 1, dd: d.getDate(),
+                gz: dayGz,
+                zhi: dayGz.charAt(1),
+                xk: lunar.getDayXunKong(),
+                mz: lunar.getMonthZhiExact ? lunar.getMonthZhiExact() : lunar.getMonthZhi()
+            });
+        }
+        const items = [];
+        function pushItem(type, yiJu, matchFn) {
+            const cand = [];
+            for (let i = 1; i < days.length && cand.length < 3; i++) {
+                if (matchFn(days[i])) {
+                    cand.push({ solar: days[i].y + '-' + String(days[i].m).padStart(2, '0') + '-' + String(days[i].dd).padStart(2, '0'), riChen: days[i].gz, monthZhi: days[i].mz });
+                }
+            }
+            if (cand.length) items.push({ type: type, yiJu: yiJu, candidates: cand });
+        }
+
+        // 1. 用神旬空 → 出空（出旬逢值）/ 冲空实空（逢冲）
+        if (yongShen && yongShen.dizhi && isKongRW7(yongShen.dizhi, xunKong)) {
+            const yongZhi = yongShen.dizhi;
+            pushItem('出空', '用神' + yongZhi + '旬空，出旬值日方应', day => day.zhi === yongZhi && day.xk.indexOf(yongZhi) === -1);
+            const chongPair = DIZHI_LIU_CHONG.find(p => p[0] === yongZhi || p[1] === yongZhi);
+            const chong = chongPair ? (chongPair[0] === yongZhi ? chongPair[1] : chongPair[0]) : '';
+            if (chong) pushItem('冲空实空', '用神' + yongZhi + '旬空，逢' + chong + '冲实之日即应', day => day.zhi === chong);
+        }
+
+        // 2. 用神月破 → 出月实破（出月逢值）/ 逢合（月破逢合）
+        if (yongShen && yongShen.dizhi && yueJian && isChongRW7(yongShen.dizhi, yueJian)) {
+            const yongZhi = yongShen.dizhi;
+            pushItem('出月实破', '用神' + yongZhi + '月破，出月逢值之日方应', day => day.zhi === yongZhi && day.mz !== yueJian);
+            const hePair = DIZHI_LIU_HE.find(p => p[0] === yongZhi || p[1] === yongZhi);
+            const he = hePair ? (hePair[0] === yongZhi ? hePair[1] : hePair[0]) : '';
+            if (he) pushItem('逢合', '用神' + yongZhi + '月破，逢' + he + '合之日可解', day => day.zhi === he);
+        }
+
+        // 3. 用神入墓 → 出墓（冲墓之日）；4. 用神被合 → 冲合（冲开合局）
+        if (yongShen && yongShen.dizhi) {
+            const wx = DIZHI_WUXING[yongShen.dizhi] || '';
+            const mu = MU_KU_TABLE[wx];
+            const ruMu = !!(mu && (yueJian === mu || riZhi === mu));
+            if (ruMu && mu) {
+                const chongMuPair = DIZHI_LIU_CHONG.find(p => p[0] === mu || p[1] === mu);
+                const chongMu = chongMuPair ? (chongMuPair[0] === mu ? chongMuPair[1] : chongMuPair[0]) : '';
+                if (chongMu) pushItem('出墓', '用神入墓于' + mu + '，逢' + chongMu + '冲墓之日应', day => day.zhi === chongMu);
+            }
+            const heOther = [yueJian, riZhi].concat(yaoDetail.map(y => y.dizhi)).filter(Boolean)
+                .find(d => d !== yongShen.dizhi && isHeRW7(yongShen.dizhi, d));
+            if (heOther) {
+                const chongPair = DIZHI_LIU_CHONG.find(p => p[0] === yongShen.dizhi || p[1] === yongShen.dizhi);
+                const chong = chongPair ? (chongPair[0] === yongShen.dizhi ? chongPair[1] : chongPair[0]) : '';
+                if (chong) pushItem('冲合', '用神' + yongShen.dizhi + '被' + heOther + '合住，逢' + chong + '冲开之日应', day => day.zhi === chong);
+            }
+        }
+
+        // 5. 动爻化进/化退 → 临值/退神
+        yaoDetail.forEach((y, idx) => {
+            if (!y.huiTou || !y.huiTou.type) return;
+            if (y.huiTou.type === '化进神' && y.bianDizhi) {
+                pushItem('临值', '第' + (idx + 1) + '爻' + y.dizhi + '化进神，逢' + y.bianDizhi + '临值之日应', day => day.zhi === y.bianDizhi);
+            } else if (y.huiTou.type === '化退神' && y.bianDizhi) {
+                pushItem('退神', '第' + (idx + 1) + '爻' + y.dizhi + '化退神，应期以退神' + y.bianDizhi + '临值断', day => day.zhi === y.bianDizhi);
+            }
+        });
+
+        // 6. 独发 → 独发爻临值或临月建
+        if (guaXiang.duFa === '独发' && guaXiang.duFaYaoIndex) {
+            const yao = yaoDetail[guaXiang.duFaYaoIndex - 1];
+            if (yao && yao.dizhi) {
+                pushItem('独发临值', '独发第' + guaXiang.duFaYaoIndex + '爻' + yao.dizhi + '，逢其临值之日应', day => day.zhi === yao.dizhi);
+                pushItem('独发临月建', '独发第' + guaXiang.duFaYaoIndex + '爻' + yao.dizhi + '，逢' + yao.dizhi + '临月建之月应', day => day.mz === yao.dizhi);
+            }
+        }
+
+        guaInfo.yingqi = items.length ? { items: items, primaryType: items[0].type } : null;
+    } catch(e) {
+        console.warn('应期引擎失败:', e);
+        guaInfo.yingqi = null;
+    }
+    return guaInfo;
+}

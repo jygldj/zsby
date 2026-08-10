@@ -960,6 +960,18 @@
             return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' + parts.join('') + '</div>';
         }
 
+        // ⭐ 阶段2：应期候选展示（供 #resultArea 结果区，数据源 guaInfo.yingqi）
+        function buildYingqiHtml(guaInfo) {
+            const yq = (guaInfo && guaInfo.yingqi) || null;
+            if (!yq || !yq.items || !yq.items.length) return '';
+            const rows = yq.items.map(it => {
+                const dates = (it.candidates || []).map(c => c.solar + '(' + c.riChen + ')').join('、');
+                return '<div style="margin-bottom:6px;line-height:1.6;">· <b>' + it.type + '</b>：' + it.yiJu + '　候选：' + dates + '</div>';
+            }).join('');
+            return '<div style="margin-top:12px;padding:10px 14px;background:#fbf7f0;border:1px solid #eadfcf;border-radius:8px;font-size:13px;color:#5a4632;">' +
+                '<div style="font-weight:bold;margin-bottom:4px;">⏳ 应期推导（候选公历日）</div>' + rows + '</div>';
+        }
+
         jieGuaBtn.addEventListener('click', async function() {
             const guaData = loadGuaData();
             // 守卫：确保 guaData 完整（防止跳转/缓存导致的数据缺失）
@@ -1142,6 +1154,11 @@
                     }
                 } catch(e) { console.warn('卦象增强计算失败（不影响主流程）:', e); }
 
+                // ⭐ 阶段2：应期引擎（依据卦象空破墓合/进退/独发推导候选公历日）
+                try {
+                    tuiYingQi(guaInfo);
+                } catch(e) { console.warn('应期引擎失败（不影响主流程）:', e); }
+
                 // ⭐ rw7 方案B：把已算好的 rw7 结果 merge 进 guaData，回写 currentGua（供增强版 qwen.js 读取）
                 try {
                     guaData.yuePoList = guaInfo.yuePoList || [];
@@ -1152,6 +1169,7 @@
                     guaData.jiShenState = guaInfo.jiShenState || null;
                     guaData.chouShenState = guaInfo.chouShenState || null;
                     guaData.guaXiang = guaInfo.guaXiang || null;
+                    guaData.yingqi = guaInfo.yingqi || null;
                     // ⭐ rw9：把 yaoDetail / fuShenList 一并并入 currentGua，供 goZejiForGua 取用神真实地支（含伏神支路）
                     guaData.yaoDetail = guaInfo.yaoDetail || [];
                     guaData.fuShenList = guaInfo.fuShenList || [];
@@ -1271,6 +1289,7 @@
                         </div>
                         ` : ''}
                         <div class="body">${resultHtml}</div>
+                        ${buildYingqiHtml(guaInfo)}
                         <div style="margin-top:14px;font-size:12px;color:#9a8876;border-top:1px solid #e0d3c4;padding-top:12px;">
                             🗨️ 卦象解读 · 时空对话　${new Date().toLocaleString('zh-CN')}
                         </div>
