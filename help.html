@@ -205,7 +205,7 @@
         <h3>🧠 第三步：AI释卦</h3>
         <p>点击 <strong>「释卦」</strong> 按钮，AI将以《增删卜易》理论为您解读。</p>
         <ul>
-            <li>支持 <strong>千问 3.7</strong>（默认主力）和 <strong>千问备选</strong>（qwen-max）两种模型</li>
+            <li>支持 <strong>千问旗舰</strong>（默认主力）和 <strong>千问备选</strong>（qwen3.7-flash）两种模型</li>
             <li>建议在起卦页面 <strong>填写所问之事</strong>，帮助AI精准分析</li>
             <li>AI会分析用神、世应、五行生克，给出结论</li>
         </ul>
@@ -250,7 +250,7 @@
         <h3>⚙️ 配置说明</h3>
         <p>AI 解卦密钥存放在网站后端（Cloudflare 环境变量），前端页面不包含任何密钥。若站长需要更换密钥：</p>
         <ul>
-            <li><strong>千问 3.7 / 千问备选</strong>：从 <a href="https://bailian.console.aliyun.com/" target="_blank">阿里云百炼平台</a> 获取 API Key</li>
+            <li><strong>千问旗舰 / 千问备选</strong>：从 <a href="https://bailian.console.aliyun.com/" target="_blank">阿里云百炼平台</a> 获取 API Key</li>
             <li>在 Cloudflare 控制台 → Pages 项目 → Settings → Environment variables 中更新 <code>QWEN_API_KEY</code> / <code>QWEN2_API_KEY</code>，保存后重新部署生效</li>
         </ul>
         <div class="tip">💡 不配置API密钥，仅起卦和排盘功能也可正常使用</div>

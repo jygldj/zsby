@@ -1,23 +1,15 @@
-// zsby/functions/api/ai.js（本仓库根，Cloudflare Pages Functions）
 // 增删卜易 · AI 释卦代理（Cloudflare Pages Functions）
-// 作用：前端把 { modelKey, systemPrompt, userPrompt } POST 到 /api/ai，
-//       由本函数用服务端环境变量中的密钥调用阿里云百炼，返回解读文本。
-//       密钥只存于 Cloudflare 环境变量，永不进入前端代码 / 浏览器。
+// 前端 POST { modelKey, systemPrompt, userPrompt } 到 /api/ai，
+// 本函数以服务端环境变量中的密钥调用阿里云百炼，返回解读文本；密钥永不进入前端。
 //
-// 部署：此文件位于本仓库 functions/api/ai.js（必须在仓库根），由 Cloudflare Pages 自动构建，无需额外配置。
-// 路径：POST /api/ai（相对路径，随部署域名自动适配）
 // 请求体：{ "modelKey": "qwen" | "qwen2", "systemPrompt": "...", "userPrompt": "..." }
 // 返回：{ "content": "AI 解读文本" } 或 { "error": "错误说明" }
 //
-// ⚠️ 环境变量（必须在 Cloudflare 控制台配置，配置后需重新部署一次生效）：
-//     Pages 项目（本仓库对应项目）→ Settings → Environment variables → Add variable：
-//       QWEN_API_KEY   = 主力千问（qwen3.7-flash-2026-07-15）的 apiKey
-//       QWEN2_API_KEY  = 备选千问（qwen3.7-flash）的 apiKey
-//       AI_GATE_TOKEN  = 可选。配置后请求需携带 x-ai-token 请求头，用于防止
-//                        未授权脚本盗用本代理消耗额度。
-//     GET /api/ai 可作健康检查。
-// 安全防护：来源白名单校验（Origin/Referer），第三方站点无法伪造浏览器来源，
-//           无来源头的直连请求（curl 调试）仍放行。
+// 环境变量（Cloudflare 控制台配置，改后需重新部署生效）：
+//   QWEN_API_KEY  = 主力（qwen-max）的 apiKey
+//   QWEN2_API_KEY = 备选（qwen3.7-flash）的 apiKey
+//   AI_GATE_TOKEN = 可选；配置后请求需携带 x-ai-token 头，防未授权脚本盗用额度
+// GET /api/ai 可作健康检查。
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -26,10 +18,7 @@ const CORS = {
   'Access-Control-Max-Age': '86400',
 };
 
-// 允许的来源白名单（浏览器跨站请求由 Origin 头判定，第三方站点无法伪造）
-// 未命中时返回 403，防止他人盗用本代理消耗 API 额度。
-// 无 Origin/Referer 的请求（如 curl 直连调试、同源发起）视为可信，放行。
-// ⚠️ 部署到新域名（非 dxwj.pages.dev）时，须在此数组追加该域名，否则前端请求被 403。
+// 来源白名单：浏览器跨站请求按 Origin/Referer 校验，未命中返回 403；无来源头的直连请求（curl/同源）放行
 const ALLOWED_ORIGINS = [
   'https://dxwj.pages.dev',
   'https://zsby.pages.dev',
@@ -42,8 +31,8 @@ const BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
 
 // 模型名映射（只改这里即可切换模型，前端无需变动）
 const MODELS = {
-  qwen: 'qwen3.7-flash',
-  qwen2: 'qwen-max',
+  qwen: 'qwen-max',
+  qwen2: 'qwen3.7-flash',
 };
 
 function json(body, status, extra) {
@@ -55,9 +44,7 @@ function json(body, status, extra) {
   return new Response(JSON.stringify(body), { status: status || 200, headers });
 }
 
-// 上游错误展示：以事实为准（上游原文 + HTTP 状态码）。
-// 原则：只呈现上游真实返回的信息，仅对可明确判定的错误类别附一句客观说明；
-// 不臆测额度、欠费、Key 失效等未证实原因。
+// 上游错误如实呈现（原文 + HTTP 状态码），仅对可明确判定的类别附客观说明，不臆测原因
 function friendlyError(message, status) {
   const m = (message || '').toString().trim();
   const fact = '上游返回（HTTP ' + (status || '?') + '）：' + (m || '无错误详情');
@@ -73,10 +60,7 @@ function friendlyError(message, status) {
   return fact;
 }
 
-// 判定请求来源是否可信：
-// - 有 Origin 头（浏览器跨站请求）：须命中白名单前缀（含端口）
-// - 有 Referer 头：取源（scheme+host）校验
-// - 均无（curl 直连 / 同源）：放行，保留调试能力
+// 来源判定：有 Origin 头按白名单校验；无 Origin 有 Referer 取源校验；均无则放行（curl 调试）
 function isAllowedOrigin(request) {
   const origin = request.headers.get('Origin');
   if (origin) {

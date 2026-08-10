@@ -691,7 +691,7 @@
 
     <!-- 模型选择 -->
     <div class="model-selector">
-        <label><input type="radio" name="model" value="qwen" checked> 千问 3.7</label>
+        <label><input type="radio" name="model" value="qwen" checked> 千问旗舰</label>
         <label><input type="radio" name="model" value="qwen2"> 千问备选</label>
     </div>
 
@@ -1160,7 +1160,7 @@
                 <div class="loading-text">
                     <div class="spinner">☯</div>
                     <div style="margin-top:10px;">正在为您解读卦象，大约需要一分钟...</div>
-                    <div style="font-size:13px;color:#9a8876;margin-top:4px;">模型：${model === 'qwen' ? '千问 3.7' : '千问备选'}</div>
+                    <div style="font-size:13px;color:#9a8876;margin-top:4px;">模型：${model === 'qwen' ? '千问旗舰' : '千问备选'}</div>
                 </div>
             `;
             jieGuaBtn.disabled = true;
@@ -1373,7 +1373,7 @@
                 }
                 const userText = escapeHtml(`姓名：${userInfo.name || '匿名'}　性别：${userInfo.gender || '未知'}　出生时辰：${userInfo.birth || '未知'}`);
                 const questionText = escapeHtml(userInfo.question || '未提供具体问题，请综合解读');
-                const modelName = usedModel === 'qwen' ? '千问 3.7' : '千问备选';
+                const modelName = usedModel === 'qwen' ? '千问旗舰' : '千问备选';
 
                 // 首句校正：无论 AI 返回何种前缀（含偶发"野鹤老人曰"套语），一律强制以固定首句开头
                 const expectedOpen = `君有疑惑，询问${userInfo.question || '此事'}，求得《${guaData.benGuaName}》之《${guaData.bianGuaName}》，今老夫为你释疑：`;
