@@ -122,7 +122,7 @@ async function callQwen(guaInfo, modelKey) {
     const userPrompt = `【固定首句】
 ${fixedOpening}
 
-【所问之事】${question || '（未提供）'}
+【所问之事】${userInfo.question || '（未提供）'}
 
 【卦象数据（已排定，请直接使用，勿自行推演）】
 本卦：${guaInfo.benGua}（${guaInfo.benPalace || ''}）
