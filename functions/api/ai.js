@@ -55,27 +55,22 @@ function json(body, status, extra) {
   return new Response(JSON.stringify(body), { status: status || 200, headers });
 }
 
-// 上游错误友好化：把百炼的英文错误映射为可操作的中文提示（保留未知错误原文）
+// 上游错误展示：以事实为准（上游原文 + HTTP 状态码）。
+// 原则：只呈现上游真实返回的信息，仅对可明确判定的错误类别附一句客观说明；
+// 不臆测额度、欠费、Key 失效等未证实原因。
 function friendlyError(message, status) {
-  const m = (message || '').toString();
-  if (/free quota|quota exhausted|quota insufficient|quota has been used up|quota exceeded/i.test(m)) {
-    return '模型免费额度已用尽：请在阿里云百炼控制台关闭"仅免费额度"模式（开通按量付费）或充值后重试，或更换未欠费的 API Key';
-  }
-  if (/arrearage|arrears|欠费|no balance|insufficient balance/i.test(m)) {
-    return '账户欠费或未开通按量付费：请在阿里云百炼控制台充值并开通按量付费后重试';
-  }
-  if (/invalidapikey|unauthorized|invalid api key|access denied/i.test(m)) {
-    return 'API Key 无效或已失效：请核对服务端 QWEN_API_KEY / QWEN2_API_KEY 环境变量后重新部署';
+  const m = (message || '').toString().trim();
+  const fact = '上游返回（HTTP ' + (status || '?') + '）：' + (m || '无错误详情');
+  if (status === 401 || /invalidapikey|unauthorized|invalid api key|access denied/i.test(m)) {
+    return fact + ' —— API Key 认证失败，请核对环境变量 QWEN_API_KEY / QWEN2_API_KEY';
   }
   if (/model.*(not.*exist|not found|not support)|invalid.*model|modelname/i.test(m)) {
-    return '模型不存在或未开通访问权限：请确认百炼控制台已开通对应模型';
+    return fact + ' —— 模型名称无效或不存在，请核对百炼控制台实际模型名';
   }
-  if (/throttl|rate.?limit|too many requests|slow down/i.test(m)) {
-    return '请求过于频繁，已触发限流，请稍后重试';
+  if (status === 429 || /throttl|rate.?limit|too many requests|slow down/i.test(m)) {
+    return fact + ' —— 触发限流，请稍后重试';
   }
-  if (status === 429) return '请求过多或额度受限（HTTP 429），请稍后重试';
-  if (status === 401) return '身份认证失败（HTTP 401）：请检查 API Key 是否有效';
-  return message;
+  return fact;
 }
 
 // 判定请求来源是否可信：

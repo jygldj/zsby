@@ -1517,17 +1517,9 @@ ${cleanResult}
                 } catch(e) { console.warn('回写历史解读失败:', e); }
 
             } catch(error) {
-                const errMsg = error.message || '请检查API配置';
-                let hint = '请确认服务端已配置 QWEN_API_KEY / QWEN2_API_KEY 环境变量后重新部署';
-                if (/额度|quota|欠费|arrear|付费|充值/.test(errMsg)) {
-                    hint = '请在阿里云百炼控制台处理额度问题（关闭"仅免费额度"模式、充值或更换有额度的 API Key），并确认备选模型 QWEN2_API_KEY 也已配置';
-                } else if (/无效|失效|认证失败|401|invalid.?key/i.test(errMsg)) {
-                    hint = '请核对服务端 QWEN_API_KEY / QWEN2_API_KEY 环境变量是否正确后重新部署';
-                } else if (/模型|不存在|未开通/.test(errMsg)) {
-                    hint = '请确认阿里云百炼控制台已开通对应模型后重试';
-                } else if (/限流|频繁|429/.test(errMsg)) {
-                    hint = '当前请求过频被限流，请稍后重试';
-                }
+                const errMsg = error.message || '未知错误（请查看浏览器控制台 F12）';
+                // 提示语不臆测原因：仅给通用排查路径，具体错误以上方"上游返回"原文为准
+                const hint = '如需排查：请核对 Cloudflare 环境变量（QWEN_API_KEY / QWEN2_API_KEY）、确认模型名与百炼控制台一致，或截图上方错误信息反馈';
                 resultArea.innerHTML = `
                     <div class="result-content">
                         <div style="color:#b33;text-align:center;padding:20px 0;">
