@@ -106,10 +106,13 @@ function applyMenLeiContext(guaInfo) {}        // 断法/应期/持世要点写�
 ```js
 const ANLI = [
   { gua: '风天小畜', yue: '未', ri: '庚子', dong: [], source: '两现章',
-    duan: '妻财两现……舍其旬空，用其不空' }
+    duan: '妻财两现……舍其旬空，用其不空',
+    yongShen: '妻财', yongShenIndex: 4 }
 ];
-function findAnli(guaMing, riChen) {}  // 同卦同时辰(或同卦)匹配，返回原始案例或 null
+function findAnli(guaMing, riChen, yueJian) {}  // 同卦同时辰(可选月建二次限定)匹配，返回原例或 null
 ```
+
+`jiegua.html` 结果区经 `buildAnliHtml` 调用 `findAnli(guaInfo.benGua, timeInfo.riChen, timeInfo.yueJian)`，命中时展示原断语与用神结论；未命中渲染为空。
 
 ### 既有文件修改
 
@@ -118,8 +121,10 @@ function findAnli(guaMing, riChen) {}  // 同卦同时辰(或同卦)匹配，返
 | `ly/suanfa.js` | 追加卦象增强函数组、`tuiYingQi`、`MENLEI_ZHISHI`、`inferMenLei`、`getYongShenByMenLei`、`applyMenLeiContext`、`ANLI`（R1/R3/R4/R6）；`xuanYongShen`(704) 排序链插入旺衰评分判据（R0-4）；`QUESTION_TO_YONGSHEN` 保留为回退并补 12 门类键（R4）；`jiWangShuaiScore`(663) 增加太岁可选维度（R1-7） |
 | `ly/zhukong.js` | `renderFinalResult`(254-261) 六神日干改从 `guaData.timeInfo.riChen` 取（R0-2）；排盘后调用 `suanQuanBuGuaXiang` 与 `tuiYingQi` |
 | `jiegou.html` | `applyManualTimeInfo`(167) 保持回写不变；`completeBtn` 回调后追加卦象增强计算 |
-| `jiegua.html` | `userText/questionText`(1126-1128) 渲染前 `escapeHtml`（R0-1）；`buildMarksHtml`(857) 与断卦参数区(1189/1227) 展示新要素；`callQwen` userPrompt 并入断卦链与应期（R5） |
+| `jiegua.html` | `userText/questionText`(1126-1128) 渲染前 `escapeHtml`（R0-1）；`buildMarksHtml`(857) 与断卦参数区(1189/1227) 展示新要素；`buildAnliHtml` 同卦同时辰对照原断（R6-1）；`callQwen` userPrompt 并入断卦链与应期（R5） |
+| `api/qwen.js` | userPrompt 追加卦象标注/入墓临绝/化进退回头生克/断卦依据链/应期候选/门类断法段落；systemPrompt 增【应期】与【门类】铁律（R5，AI 只引用不推演） |
 | `wnl.html` | 应期反查(1120/1239/1482) 复用 `suanfa.js` 内 `tuiYingQi` 统一口径 |
+| `test/regression.js` | 仓库内回归（R6-2）：64卦数据完整性 + 六冲六合全表 + 原案例(两现章) + 吉凶/门类/应期冒烟；提交前运行 |
 
 ## Data Models
 

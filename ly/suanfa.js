@@ -1551,3 +1551,27 @@ function applyMenLeiContext(guaInfo) {
     };
     return guaInfo;
 }
+
+// ============================================================
+// 十一、R6 原案例库（《增删卜易》占例，并入 suanfa.js 供对照与回归）
+// ============================================================
+const ANLI = [
+    {
+        gua: '风天小畜', yue: '未', ri: '庚子', dong: [],
+        source: '两现章',
+        duan: '妻财两现，舍其旬空，用其不空；取应爻未土旺相为用',
+        yongShen: '妻财', yongShenIndex: 4
+    }
+];
+
+/**
+ * R6-1 原案例匹配：同卦同时辰（或同卦）命中返回原例，否则 null
+ * @param {string} guaMing - 本卦卦名
+ * @param {string} riChen - 日辰干支（如"庚子"）
+ * @param {string} [yueJian] - 月建地支（可选，二次限定）
+ * @returns {object|null}
+ */
+function findAnli(guaMing, riChen, yueJian) {
+    if (!guaMing || !riChen) return null;
+    return ANLI.find(a => a.gua === guaMing && a.ri === riChen && (!yueJian || a.yue === yueJian)) || null;
+}

@@ -67,6 +67,40 @@ async function callQwen(guaInfo, modelKey) {
         ? `${guaInfo.yuanShenState.liuqin || ''}（${guaInfo.yuanShenState.isFuCang ? '伏藏' : '显'}，${guaInfo.yuanShenState.isKong ? '旬空' : '不空'}）—— ${guaInfo.yuanShenState.duanYu || ''}`
         : '无';
 
+    // ⭐ R5-1 全要素并入提示词：卦象/墓绝/进退反伏/独发/断卦链/应期/门类（已由引擎算定，AI 只引用不推演）
+    const gx = guaInfo.guaXiang || {};
+    const gxTags = [];
+    if (gx.liuChong) gxTags.push('六冲');
+    if (gx.liuHe) gxTags.push('六合');
+    if (gx.fanYin) gxTags.push('反吟');
+    if (gx.fuYin) gxTags.push('伏吟');
+    if (gx.duFa === '独发' && gx.duFaYaoIndex) gxTags.push('独发第' + gx.duFaYaoIndex + '爻');
+    if (gx.duFa === '六爻安静') gxTags.push('六爻安静');
+    const guaXiangText = (gxTags.length ? gxTags.join('、') : '无特殊卦象') +
+        (gx.dongYaoCount ? '（动爻' + gx.dongYaoCount + '个）' : '');
+
+    const muJueText = (guaInfo.yaoDetail || [])
+        .map((y, i) => y.shengWangMuJue && (y.shengWangMuJue.ruMu || y.shengWangMuJue.linJue)
+            ? `第${i + 1}爻${y.dizhi}${y.liuqin || ''}${y.shengWangMuJue.ruMu ? '入墓' : ''}${y.shengWangMuJue.linJue ? '临绝' : ''}` : null)
+        .filter(Boolean).join('；') || '无入墓临绝';
+    const huiTouText = (guaInfo.yaoDetail || [])
+        .map((y, i) => y.huiTou ? `第${i + 1}爻${y.dizhi}${y.liuqin || ''}动而${y.huiTou.type}` : null)
+        .filter(Boolean).join('；') || '无化进退化回头生克';
+
+    const dg = guaInfo.duanGua;
+    const duanGuaText = dg && dg.chain && dg.chain.length
+        ? dg.chain.map(c => `【${c.jueJu}】${c.jieLun}${c.yiJu ? '（' + c.yiJu + '）' : ''}`).join('\n')
+        : '未计算';
+    const yq = guaInfo.yingqi;
+    const yingqiText = yq && yq.items && yq.items.length
+        ? yq.items.map(it => `${it.type}：${it.yiJu || ''} → ${(it.candidates || []).map(c => c.solar).join('、') || '暂无候选'}`).join('\n')
+        : '未计算';
+
+    const mc = guaInfo.menleiContext;
+    const menleiText = mc
+        ? `门类：${mc.menlei}（以${mc.yongShen || '所问'}为用）　断法：${mc.duanFa.join('；')}　应期：${mc.yingqi.join('、')}　持世：${mc.chiShi}`
+        : '未命中知识库门类';
+
     const systemPrompt = `你是一位精通《增删卜易》的六爻占卜专家，以老者口吻释卦，自称"老夫"。断语严谨客观，得古法精髓。
 
 【输出格式铁律（务必遵守）】
@@ -81,7 +115,9 @@ async function callQwen(guaInfo, modelKey) {
 
 【断卦】重五行生克，轻卦辞；以用神为中心察旺衰；日月为纲；动变为机。
 【数据】卦象数据已按古法算定，你只解读不推演；用神理由须原文复述；标注与判断冲突时以标注为准。
-【专业详解六步】用神取舍／月建影响／日辰影响／世应关系／动爻之变／综合断语与应期。`;
+【应期】应期候选已由引擎推算，解读时必须引用【应期候选】中的日期，严禁自行推演干支计算。
+【门类】当给出门类断法要点时，必须以该门类断法为分析框架。
+【专业详解六步】用神取舍／月建影响／日辰影响／世应关系／动爻之变／综合断语与应期（应期引用候选日期）。`;
 
     const userPrompt = `【固定首句】
 ${fixedOpening}
@@ -103,6 +139,18 @@ ${yaoLines}
 原神：${yuanShenText}
 
 世爻状态：${guaInfo.shiYaoZhuangTai ? guaInfo.shiYaoZhuangTai + '：' + (guaInfo.shiYaoDetail || '') : '平稳'}
+
+卦象标注：${guaXiangText}
+入墓临绝：${muJueText}
+化进化退回头生克：${huiTouText}
+
+断卦依据链：
+${duanGuaText}
+
+应期候选：
+${yingqiText}
+
+门类断法：${menleiText}
 
 请严格按 systemPrompt 格式输出：以固定首句开头，紧接通俗断语，再写【专业详解】标记并展开六步专业分析。`;
 

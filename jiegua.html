@@ -972,6 +972,19 @@
                 '<div style="font-weight:bold;margin-bottom:4px;">⏳ 应期推导（候选公历日）</div>' + rows + '</div>';
         }
 
+        // ⭐ R6-1 原案例对照：同卦同时辰命中时展示《增删卜易》原断语
+        function buildAnliHtml(guaInfo) {
+            const timeInfo = (guaInfo && guaInfo.timeInfo) || {};
+            const anli = findAnli(guaInfo && guaInfo.benGua, timeInfo.riChen, timeInfo.yueJian);
+            if (!anli) return '';
+            return '<div style="margin-top:12px;padding:10px 14px;background:#f4f0e6;border:1px solid #d8cfba;border-radius:8px;font-size:13px;color:#4a4230;">' +
+                '<div style="font-weight:bold;margin-bottom:4px;">📜 原案例对照（' + anli.source + '）</div>' +
+                '<div>本卦与《增删卜易·' + anli.source + '》原例（' + anli.gua + '，' + anli.yue + '月' + anli.ri + '日）同卦同时辰：</div>' +
+                '<div style="margin-top:4px;font-style:italic;">"' + anli.duan + '"</div>' +
+                (anli.yongShen ? '<div style="margin-top:4px;color:#7a6652;">原例用神：' + anli.yongShen + '（取第' + anli.yongShenIndex + '爻）</div>' : '') +
+                '</div>';
+        }
+
         jieGuaBtn.addEventListener('click', async function() {
             const guaData = loadGuaData();
             // 守卫：确保 guaData 完整（防止跳转/缓存导致的数据缺失）
@@ -1303,6 +1316,7 @@
                         ` : ''}
                         <div class="body">${resultHtml}</div>
                         ${buildYingqiHtml(guaInfo)}
+                        ${buildAnliHtml(guaInfo)}
                         <div style="margin-top:14px;font-size:12px;color:#9a8876;border-top:1px solid #e0d3c4;padding-top:12px;">
                             🗨️ 卦象解读 · 时空对话　${new Date().toLocaleString('zh-CN')}
                         </div>
