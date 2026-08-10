@@ -686,13 +686,20 @@
             
             // 旬空 - 直接从 lunar 库获取（库内置算法基于天干地支索引差，正确可靠）
             const xunKong = lunar.getDayXunKong() || '—';
-            
+
+            // 年干支（太岁，立春换年；太岁仅标注不参与评分）
+            let nianGanZhi = '';
+            try {
+                nianGanZhi = lunar.getYearInGanZhiByLiChun ? lunar.getYearInGanZhiByLiChun() : (lunar.getYearInGanZhi ? lunar.getYearInGanZhi() : '');
+            } catch(e) { nianGanZhi = ''; }
+
             return {
                 solarTime: solarTime,
                 lunarTime: lunarTime,
                 yueJian: yueJian,
                 riChen: riChen,
-                xunKong: xunKong
+                xunKong: xunKong,
+                nianGanZhi: nianGanZhi
             };
         }
 
@@ -929,6 +936,9 @@
             if (gx.liuHe) parts.push('<span style="' + tagStyle + 'background:#e8f8f5;color:#117a65;border:1px solid #a3e4d7;">六合卦</span>');
             if (gx.fanYin) parts.push('<span style="' + tagStyle + 'background:#fef5e7;color:#b9770e;border:1px solid #f0d9b5;">反吟</span>');
             if (gx.fuYin) parts.push('<span style="' + tagStyle + 'background:#fdf2e9;color:#ca6f1e;border:1px solid #f5cba7;">伏吟</span>');
+            if (gx.sanHe && gx.sanHe.length) parts.push('<span style="' + tagStyle + 'background:#eafaf1;color:#1e8449;border:1px solid #a9dfbf;">' + gx.sanHe.join('、') + '</span>');
+            if (gx.sanHeQue && gx.sanHeQue.length) parts.push('<span style="' + tagStyle + 'background:#fef9e7;color:#9a7d0a;border:1px solid #f9e79f;">' + gx.sanHeQue.map(q => q.group + '缺' + q.que).join('、') + '</span>');
+            if (gx.xing && gx.xing.length) parts.push('<span style="' + tagStyle + 'background:#fdedec;color:#943126;border:1px solid #f5b7b1;">' + gx.xing.join('、') + '</span>');
             if (gx.duFa) {
                 const duLabel = (gx.duFa === '独发') ? ('独发·第' + gx.duFaYaoIndex + '爻') : gx.duFa;
                 parts.push('<span style="' + tagStyle + 'background:#eaf2f8;color:#2471a3;border:1px solid #aed6f1;">' + duLabel + '</span>');
@@ -942,6 +952,8 @@
                 if (y.huiTou && y.huiTou.type && y.huiTou.type !== '无') {
                     notes.push('第' + (i + 1) + '爻' + y.huiTou.type + (y.huiTou.desc ? '(' + y.huiTou.desc + ')' : ''));
                 }
+                if (y.dongSan) notes.push('第' + (i + 1) + '爻动散');
+                if (y.nianPo) notes.push('第' + (i + 1) + '爻岁破');
                 if (notes.length) parts.push('<span style="' + tagStyle + 'background:#f4f6f7;color:#5a4632;border:1px solid #d5dbdb;">' + notes.join('；') + '</span>');
             });
             if (!parts.length) return '<div style="font-size:12px;color:#7a8;">🌿 卦象平稳，无六冲六合/反吟伏吟等特殊格局</div>';
@@ -1068,6 +1080,7 @@
                         const r = {
                             dizhi: yao.地支,
                             liuqin: yao.六亲,
+                            tianGan: yao.天干 || '',
                             isDong: isDong || false
                         };
                         if (isDong && guaData.bianYao && guaData.bianYao[idx]) {
@@ -1154,6 +1167,11 @@
                         by.kongDetail = y.kongDetail;
                         by.shengWangMuJue = y.shengWangMuJue;
                         by.huiTou = y.huiTou;
+                        by.sanHe = y.sanHe;
+                        by.xing = y.xing;
+                        by.dongSan = y.dongSan;
+                        by.nianPo = y.nianPo;
+                        by.naYin = y.naYin;
                     });
                     localStorage.setItem('currentGua', JSON.stringify(guaData));
                     try { sessionStorage.setItem('currentGua', JSON.stringify(guaData)); } catch(e2) {}

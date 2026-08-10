@@ -1015,12 +1015,118 @@ function suanDuFa(guaInfo) {
     return guaInfo;
 }
 
-// 汇总入口：一次补齐 R1-1 ~ R1-6
+// 汇总入口：一次补齐 R1-1 ~ R1-8
 function suanQuanBuGuaXiang(guaInfo) {
     suanLiuChongLiuHe(guaInfo);
     suanShengWangMuJue(guaInfo);
     suanHuiTou(guaInfo);
     suanFanYinFuYin(guaInfo);
+    suanSanHeSanXing(guaInfo);
+    suanDongSan(guaInfo);
     suanDuFa(guaInfo);
+    suanTaiSui(guaInfo);
+    suanNaYin(guaInfo);
+    return guaInfo;
+}
+
+// R1-5 三合三刑（三合章/三刑章）：
+//   三合：月支+日支+动爻地支凑齐申子辰/寅午戌/巳酉丑/亥卯未→成局；只差一支→记缺爻
+//   三刑：月日动爻中寅巳申、丑戌未成三刑，子卯相刑，辰午酉亥自刑（同支重见）
+const SAN_HE_GROUPS = [
+    { name: '申子辰水局', dz: ['申','子','辰'] },
+    { name: '寅午戌火局', dz: ['寅','午','戌'] },
+    { name: '巳酉丑金局', dz: ['巳','酉','丑'] },
+    { name: '亥卯未木局', dz: ['亥','卯','未'] }
+];
+const XING_GROUPS = [ ['寅','巳','申'], ['丑','戌','未'], ['子','卯'] ];
+const ZI_XING = ['辰','午','酉','亥'];
+function suanSanHeSanXing(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const timeInfo = guaInfo.timeInfo || {};
+    const yueJian = timeInfo.yueJian || '';
+    const riChen = timeInfo.riChen || '';
+    const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
+    const yueSet = yueJian ? [yueJian] : [];
+    const riSet = riZhi ? [riZhi] : [];
+    const dongSet = [];
+    yaoDetail.forEach(y => { if (y.isDong && y.dizhi) dongSet.push(y.dizhi); });
+    const pool = Array.from(new Set([].concat(yueSet, riSet, dongSet)));
+    guaInfo.guaXiang = guaInfo.guaXiang || {};
+    // 三合局：三支凑齐为成局；恰有两支（且含月支）记缺爻
+    const heJu = [], queJu = [];
+    SAN_HE_GROUPS.forEach(grp => {
+        const inPool = grp.dz.filter(d => pool.indexOf(d) !== -1);
+        if (inPool.length === 3) heJu.push(grp.name);
+        else if (inPool.length === 2 && yueSet.some(m => inPool.indexOf(m) !== -1)) {
+            const que = grp.dz.find(d => pool.indexOf(d) === -1);
+            queJu.push({ group: grp.name, que: que });
+        }
+    });
+    guaInfo.guaXiang.sanHe = heJu;
+    guaInfo.guaXiang.sanHeQue = queJu;
+    // 爻级 sanHe：动爻若属成局三支则标注
+    yaoDetail.forEach(y => {
+        if (!y.isDong) return;
+        const hit = heJu.map(name => SAN_HE_GROUPS.find(g => g.name === name))
+                        .filter(g => g && g.dz.indexOf(y.dizhi) !== -1);
+        if (hit.length) y.sanHe = { group: hit[0].name, wan: true };
+    });
+    // 三刑
+    const xingJu = [];
+    XING_GROUPS.forEach(g => { if (g.every(d => pool.indexOf(d) !== -1)) xingJu.push(g.join('')); });
+    const count = {};
+    [].concat(yueSet, riSet, dongSet).forEach(d => { count[d] = (count[d] || 0) + 1; });
+    ZI_XING.forEach(z => { if ((count[z] || 0) >= 2) xingJu.push(z + '自刑'); });
+    guaInfo.guaXiang.xing = xingJu;
+    yaoDetail.forEach(y => {
+        const hits = xingJu.filter(x => x.indexOf(y.dizhi) !== -1);
+        if (hits.length) y.xing = hits.join(',');
+    });
+    return guaInfo;
+}
+
+// R1-6 动散：动爻被日支冲为动散（如风吹火灭，散而不成）
+function suanDongSan(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const riChen = (guaInfo.timeInfo || {}).riChen || '';
+    const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
+    yaoDetail.forEach(y => {
+        y.dongSan = false;
+        if (y.isDong && riZhi && isChongRW7(y.dizhi, riZhi)) y.dongSan = true;
+    });
+    return guaInfo;
+}
+
+// R1-7 太岁岁破：年支冲爻为岁破（默认不改变既有评分，仅标注）
+function suanTaiSui(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const nianGanZhi = (guaInfo.timeInfo || {}).nianGanZhi || '';
+    const nianZhi = nianGanZhi.length >= 2 ? nianGanZhi.charAt(1) : '';
+    yaoDetail.forEach(y => {
+        y.nianPo = false;
+        if (y.dizhi && nianZhi && isChongRW7(y.dizhi, nianZhi)) y.nianPo = true;
+    });
+    return guaInfo;
+}
+
+// R1-8 纳音（六十甲子纳音表，逐爻干支查表）
+const NA_YIN_60 = {
+    '甲子':'海中金','乙丑':'海中金','丙寅':'炉中火','丁卯':'炉中火','戊辰':'大林木','己巳':'大林木',
+    '庚午':'路旁土','辛未':'路旁土','壬申':'剑锋金','癸酉':'剑锋金','甲戌':'山头火','乙亥':'山头火',
+    '丙子':'涧下水','丁丑':'涧下水','戊寅':'城头土','己卯':'城头土','庚辰':'白蜡金','辛巳':'白蜡金',
+    '壬午':'杨柳木','癸未':'杨柳木','甲申':'泉中水','乙酉':'泉中水','丙戌':'屋上土','丁亥':'屋上土',
+    '戊子':'霹雳火','己丑':'霹雳火','庚寅':'松柏木','辛卯':'松柏木','壬辰':'长流水','癸巳':'长流水',
+    '甲午':'沙中金','乙未':'沙中金','丙申':'山下火','丁酉':'山下火','戊戌':'平地木','己亥':'平地木',
+    '庚子':'壁上土','辛丑':'壁上土','壬寅':'金箔金','癸卯':'金箔金','甲辰':'覆灯火','乙巳':'覆灯火',
+    '丙午':'天河水','丁未':'天河水','戊申':'大驿土','己酉':'大驿土','庚戌':'钗钏金','辛亥':'钗钏金',
+    '壬子':'桑柘木','癸丑':'桑柘木','甲寅':'大溪水','乙卯':'大溪水','丙辰':'沙中土','丁巳':'沙中土',
+    '戊午':'天上火','己未':'天上火','庚申':'石榴木','辛酉':'石榴木','壬戌':'大海水','癸亥':'大海水'
+};
+function suanNaYin(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    yaoDetail.forEach(y => {
+        const gz = (y.tianGan || '') + (y.dizhi || '');
+        y.naYin = NA_YIN_60[gz] || '';
+    });
     return guaInfo;
 }
