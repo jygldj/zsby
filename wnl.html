@@ -1348,14 +1348,9 @@
             '<div class="hl-pos-item"><span class="hl-pos-label">太岁</span><span class="hl-pos-val">'+posTaiSui+posTaiSuiDesc+'</span></div>'+
             '</div></div>';
 
-        html += '<div class="hl-card">'+
-            '<div class="hl-card-title">十二建除</div>'+
-            '<div class="hl-jianchu">'+jianChu+'</div>'+
-            '</div>';
-
-        html += '<div class="hl-card">'+
-            '<div class="hl-card-title">节气</div>'+
-            '<div class="hl-jieqi-info">'+jqStr+'</div>'+
+        html += '<div class="hl-card" style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;">'+
+            '<div class="hl-card-title" style="margin:0;">十二建除</div>'+
+            '<div class="hl-jianchu" style="font-size:15px;font-weight:bold;color:#8b6f47;">'+jianChu+'</div>'+
             '</div>';
 
         huangliPanel.innerHTML = html;
