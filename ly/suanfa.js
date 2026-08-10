@@ -879,3 +879,148 @@ function jiShenChouShen(guaInfo) {
     guaInfo.chouShenState = buildState(chouItems, '仇神');
     return guaInfo;
 }
+
+// ============================================================
+// 十、阶段1：卦象增强引擎（R1-1~R1-6，并入 suanfa.js）
+// 依据：《增删卜易》六冲章/六合章/生旺墓绝章/进退章/反伏章/独发章
+// 全部为确定性纯函数，输入 guaInfo 就地扩展，不改动 rw7/rw8 既有函数。
+// 入口：suanQuanBuGuaXiang(guaInfo)，在 jiegua.html 排盘后调用。
+// ============================================================
+
+// 六合（六合章）：子丑、寅亥、卯戌、辰酉、巳申、午未
+const DIZHI_LIU_HE = [['子','丑'],['寅','亥'],['卯','戌'],['辰','酉'],['巳','申'],['午','未']];
+function isHeRW7(d1, d2) {
+    if (!d1 || !d2) return false;
+    return DIZHI_LIU_HE.some(p => (p[0] === d1 && p[1] === d2) || (p[0] === d2 && p[1] === d1));
+}
+
+// 五行长生起始支（生旺墓绝章：金长生在巳、木长生在亥、水土长生在申、火长生在寅）
+const CHANG_SHENG_TABLE = { '金':'巳', '木':'亥', '水':'申', '土':'申', '火':'寅' };
+// 五行墓库（生旺墓绝章）：金墓在丑、木墓在未、水土墓在辰、火墓在戌
+const MU_KU_TABLE = { '金':'丑', '木':'未', '水':'辰', '土':'辰', '火':'戌' };
+// 五行绝位（生旺墓绝章）：金绝在寅、木绝在申、水土绝在巳、火绝在亥
+const JUE_WEI_TABLE = { '金':'寅', '木':'申', '水':'巳', '土':'巳', '火':'亥' };
+
+// 进退神表（进退章：寅进卯、辰进巳、午进未、申进酉、戌进亥、子进丑）
+const JIN_TUI_PAIR = { '寅':'卯','卯':'寅','辰':'巳','巳':'辰','午':'未','未':'午','申':'酉','酉':'申','戌':'亥','亥':'戌','子':'丑','丑':'子' };
+const JIN_SHEN = { '寅':1, '辰':1, '午':1, '申':1, '戌':1, '子':1 };   // 阳支为进神
+
+// R1-1 六冲六合卦标注：上下卦对应爻(1-4/2-5/3-6)逐一相冲→六冲，逐一相合→六合
+function suanLiuChongLiuHe(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    guaInfo.guaXiang = guaInfo.guaXiang || {};
+    guaInfo.guaXiang.liuChong = false;
+    guaInfo.guaXiang.liuHe = false;
+    if (yaoDetail.length < 6) return guaInfo;
+    let chong = true, he = true;
+    for (let i = 0; i < 3; i++) {
+        const d1 = yaoDetail[i].dizhi, d2 = yaoDetail[i + 3].dizhi;
+        if (!isChongRW7(d1, d2)) chong = false;
+        if (!isHeRW7(d1, d2)) he = false;
+    }
+    guaInfo.guaXiang.liuChong = chong;
+    guaInfo.guaXiang.liuHe = he;
+    return guaInfo;
+}
+
+// R1-2 生旺墓绝十二宫：逐爻标注宫位/入墓/临绝
+function suanShengWangMuJue(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const timeInfo = guaInfo.timeInfo || {};
+    const yueJian = timeInfo.yueJian || '';
+    const riChen = timeInfo.riChen || '';
+    const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
+    yaoDetail.forEach(y => {
+        if (!y.dizhi) return;
+        const wx = DIZHI_WUXING[y.dizhi] || '';
+        const mu = MU_KU_TABLE[wx];
+        const jue = JUE_WEI_TABLE[wx];
+        const ruMu = !!(mu && (yueJian === mu || riZhi === mu));
+        const linJue = !!(jue && (yueJian === jue || riZhi === jue));
+        y.shengWangMuJue = {
+            changShengZhi: CHANG_SHENG_TABLE[wx] || '',
+            ruMu: ruMu,
+            linJue: linJue,
+            state: ruMu ? '墓' : (linJue ? '绝' : '')
+        };
+    });
+    return guaInfo;
+}
+
+// R1-3 回头生克与进退神：动爻化出之爻对本爻的关系（化空/化破/化墓/化绝）
+function suanHuiTou(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const timeInfo = guaInfo.timeInfo || {};
+    const xunKong = timeInfo.xunKong || '';
+    const yueJian = timeInfo.yueJian || '';
+    yaoDetail.forEach(y => {
+        if (!y.isDong || !y.bianDizhi) return;
+        const benWx = DIZHI_WUXING[y.dizhi] || '';
+        const bianWx = DIZHI_WUXING[y.bianDizhi] || '';
+        let type = '', desc = '';
+        // 进退神优先（化出同类地支）
+        const pair = JIN_TUI_PAIR[y.dizhi];
+        if (pair === y.bianDizhi) {
+            type = JIN_SHEN[y.dizhi] ? '化进神' : '化退神';
+            desc = y.dizhi + '动化' + y.bianDizhi + (JIN_SHEN[y.dizhi] ? '，进神其力倍增' : '，退神其势渐衰');
+        } else if (benWx) {
+            // 化墓/化绝（本爻五行之墓库/绝位，墓绝皆凶，优先于回头生克）
+            if (y.bianDizhi === MU_KU_TABLE[benWx]) { type = '化墓'; desc = '化' + y.bianDizhi + '入' + benWx + '之墓，事有归藏难发'; }
+            else if (y.bianDizhi === JUE_WEI_TABLE[benWx]) { type = '化绝'; desc = '化' + y.bianDizhi + '临' + benWx + '之绝，气断难续'; }
+            else if (bianWx) {
+                if (WX_SHENG_RW7[bianWx] === benWx) { type = '回头生'; desc = y.bianDizhi + '(' + bianWx + ')生本爻，吉上加力'; }
+                else if (WX_KE_RW7[bianWx] === benWx) { type = '回头克'; desc = y.bianDizhi + '(' + bianWx + ')克本爻，凶险加身'; }
+            }
+        }
+        // 化空/化破
+        if (!type) {
+            if (isKongRW7(y.bianDizhi, xunKong)) { type = '化空'; desc = y.bianDizhi + '旬空，出空方应'; }
+            else if (yueJian && isChongRW7(y.bianDizhi, yueJian)) { type = '化破'; desc = y.bianDizhi + '逢月破，如瓮破难存'; }
+        }
+        y.huiTou = { type: type || '无', value: (y.bianLiuqin ? '化' + y.bianLiuqin : ''), desc: desc };
+    });
+    return guaInfo;
+}
+
+// R1-4 反吟伏吟：本卦与变卦六爻地支逐一相冲→反吟，逐一相同→伏吟
+function suanFanYinFuYin(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const bianYao = guaInfo.bianYao || [];
+    guaInfo.guaXiang = guaInfo.guaXiang || {};
+    guaInfo.guaXiang.fanYin = false;
+    guaInfo.guaXiang.fuYin = false;
+    if (yaoDetail.length < 6 || bianYao.length < 6) return guaInfo;
+    let chongAll = true, sameAll = true;
+    for (let i = 0; i < 6; i++) {
+        const d1 = yaoDetail[i].dizhi, d2 = bianYao[i].地支;
+        if (!d1 || !d2) { chongAll = false; sameAll = false; break; }
+        if (!isChongRW7(d1, d2)) chongAll = false;
+        if (d1 !== d2) sameAll = false;
+    }
+    if (chongAll) guaInfo.guaXiang.fanYin = true;
+    if (sameAll) guaInfo.guaXiang.fuYin = true;
+    return guaInfo;
+}
+
+// R1-6 独发独静：动爻计数（独发章：一爻独发，卦象所指最真）
+function suanDuFa(guaInfo) {
+    const yaoDetail = guaInfo.yaoDetail || [];
+    const dongIdx = [];
+    yaoDetail.forEach((y, i) => { if (y.isDong) dongIdx.push(i + 1); });
+    guaInfo.guaXiang = guaInfo.guaXiang || {};
+    if (dongIdx.length === 1) { guaInfo.guaXiang.duFa = '独发'; guaInfo.guaXiang.duFaYaoIndex = dongIdx[0]; }
+    else if (dongIdx.length === 0) { guaInfo.guaXiang.duFa = '六爻安静'; guaInfo.guaXiang.duFaYaoIndex = null; }
+    else { guaInfo.guaXiang.duFa = '多动'; guaInfo.guaXiang.duFaYaoIndex = null; }
+    guaInfo.guaXiang.dongYaoCount = dongIdx.length;
+    return guaInfo;
+}
+
+// 汇总入口：一次补齐 R1-1 ~ R1-6
+function suanQuanBuGuaXiang(guaInfo) {
+    suanLiuChongLiuHe(guaInfo);
+    suanShengWangMuJue(guaInfo);
+    suanHuiTou(guaInfo);
+    suanFanYinFuYin(guaInfo);
+    suanDuFa(guaInfo);
+    return guaInfo;
+}

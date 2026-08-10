@@ -576,6 +576,7 @@
         <span style="display:none;" id="benGuaName">—</span>
         <span style="display:none;" id="bianGuaName">—</span>
         <div class="gua-marks" id="guaMarks" style="display:none;margin-top:8px;"></div>
+        <div class="gua-marks" id="guaXiangMarks" style="display:none;margin-top:8px;"></div>
         <div class="gua-marks" id="yongShenMarks" style="display:none;margin-top:8px;"></div>
     </div>
 
@@ -918,6 +919,35 @@
             return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' + parts.join('') + '</div>';
         }
 
+        // ⭐ 阶段1：卦象增强展示（六冲六合/反吟伏吟/独发独静/墓绝/回头生克进退，供 #guaXiangMarks 区域）
+        function buildGuaXiangHtml(guaInfo) {
+            const gx = guaInfo.guaXiang || {};
+            const tagStyle = 'display:inline-block;padding:2px 8px;border-radius:10px;font-size:12px;margin:2px;';
+            const parts = [];
+            // 卦象级标记
+            if (gx.liuChong) parts.push('<span style="' + tagStyle + 'background:#fde8e8;color:#c0392b;border:1px solid #e6b0aa;">六冲卦</span>');
+            if (gx.liuHe) parts.push('<span style="' + tagStyle + 'background:#e8f8f5;color:#117a65;border:1px solid #a3e4d7;">六合卦</span>');
+            if (gx.fanYin) parts.push('<span style="' + tagStyle + 'background:#fef5e7;color:#b9770e;border:1px solid #f0d9b5;">反吟</span>');
+            if (gx.fuYin) parts.push('<span style="' + tagStyle + 'background:#fdf2e9;color:#ca6f1e;border:1px solid #f5cba7;">伏吟</span>');
+            if (gx.duFa) {
+                const duLabel = (gx.duFa === '独发') ? ('独发·第' + gx.duFaYaoIndex + '爻') : gx.duFa;
+                parts.push('<span style="' + tagStyle + 'background:#eaf2f8;color:#2471a3;border:1px solid #aed6f1;">' + duLabel + '</span>');
+            }
+            // 爻级细节（墓绝 / 回头生克进退 / 化墓绝空破）
+            (guaInfo.yaoDetail || []).forEach((y, i) => {
+                const notes = [];
+                if (y.shengWangMuJue && (y.shengWangMuJue.ruMu || y.shengWangMuJue.linJue)) {
+                    notes.push('第' + (i + 1) + '爻' + (y.shengWangMuJue.ruMu ? '入墓' : '临绝') + '(' + y.dizhi + ')');
+                }
+                if (y.huiTou && y.huiTou.type && y.huiTou.type !== '无') {
+                    notes.push('第' + (i + 1) + '爻' + y.huiTou.type + (y.huiTou.desc ? '(' + y.huiTou.desc + ')' : ''));
+                }
+                if (notes.length) parts.push('<span style="' + tagStyle + 'background:#f4f6f7;color:#5a4632;border:1px solid #d5dbdb;">' + notes.join('；') + '</span>');
+            });
+            if (!parts.length) return '<div style="font-size:12px;color:#7a8;">🌿 卦象平稳，无六冲六合/反吟伏吟等特殊格局</div>';
+            return '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">' + parts.join('') + '</div>';
+        }
+
         jieGuaBtn.addEventListener('click', async function() {
             const guaData = loadGuaData();
             // 守卫：确保 guaData 完整（防止跳转/缓存导致的数据缺失）
@@ -1089,6 +1119,16 @@
                     }
                 } catch(e) { console.warn('rw8 计算失败（不影响主流程）:', e); }
 
+                // ⭐ 阶段1：卦象增强引擎（六冲六合/生旺墓绝/进退/反伏/回头生克/独发独静）
+                try {
+                    suanQuanBuGuaXiang(guaInfo);
+                    const gxEl = document.getElementById('guaXiangMarks');
+                    if (gxEl) {
+                        gxEl.innerHTML = buildGuaXiangHtml(guaInfo);
+                        gxEl.style.display = 'block';
+                    }
+                } catch(e) { console.warn('卦象增强计算失败（不影响主流程）:', e); }
+
                 // ⭐ rw7 方案B：把已算好的 rw7 结果 merge 进 guaData，回写 currentGua（供增强版 qwen.js 读取）
                 try {
                     guaData.yuePoList = guaInfo.yuePoList || [];
@@ -1098,6 +1138,7 @@
                     guaData.yongShen = guaInfo.yongShen || null;
                     guaData.jiShenState = guaInfo.jiShenState || null;
                     guaData.chouShenState = guaInfo.chouShenState || null;
+                    guaData.guaXiang = guaInfo.guaXiang || null;
                     // ⭐ rw9：把 yaoDetail / fuShenList 一并并入 currentGua，供 goZejiForGua 取用神真实地支（含伏神支路）
                     guaData.yaoDetail = guaInfo.yaoDetail || [];
                     guaData.fuShenList = guaInfo.fuShenList || [];
@@ -1111,6 +1152,8 @@
                         by.riPoReason = y.riPoReason;
                         by.kongType = y.kongType;
                         by.kongDetail = y.kongDetail;
+                        by.shengWangMuJue = y.shengWangMuJue;
+                        by.huiTou = y.huiTou;
                     });
                     localStorage.setItem('currentGua', JSON.stringify(guaData));
                     try { sessionStorage.setItem('currentGua', JSON.stringify(guaData)); } catch(e2) {}
