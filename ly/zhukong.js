@@ -251,11 +251,19 @@
     // ============================================================
     function renderFinalResult(benGua, bianGua, yaoResultsArr, dongStatusArr) {
         // 取日干（六神依日辰而定）
-        const now = new Date();
+        // R0-2：手动输卦模式下，六神依用户所选日辰排定，与释卦断卦旺衰共用同一日辰
         let dayGan = '甲';
         try {
-            dayGan = Solar.fromYmd(now.getFullYear(), now.getMonth() + 1, now.getDate())
-                .getLunar().getDayInGanZhi().charAt(0);
+            const modeInputBtn = document.getElementById('modeInputBtn');
+            const isManual = modeInputBtn && modeInputBtn.classList.contains('active');
+            const selDayEl = document.getElementById('selDay');
+            if (isManual && selDayEl && selDayEl.value) {
+                dayGan = selDayEl.value.charAt(0);
+            } else {
+                const now = new Date();
+                dayGan = Solar.fromYmd(now.getFullYear(), now.getMonth() + 1, now.getDate())
+                    .getLunar().getDayInGanZhi().charAt(0);
+            }
         } catch(e) {
             console.warn('取日干失败，使用默认值甲:', e);
         }

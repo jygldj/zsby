@@ -702,7 +702,15 @@ function jiWangShuaiScore(yao, guaInfo) {
  * 舍闲取世、舍静取动、舍破取全、舍空取实、舍伤取安
  */
 function xuanYongShen(guaInfo, questionType) {
-    const yongShenLiuqin = YONG_SHEN_MAP_RW8[questionType] || null;
+    let yongShenLiuqin = YONG_SHEN_MAP_RW8[questionType] || null;
+    let yongShenNote = '';
+    // R0-3：婚姻/感情按求卦者性别分流（《增删卜易·婚姻章》：男占以妻财为用，女占以官鬼为用）
+    if ((questionType === '婚姻' || questionType === '感情') && yongShenLiuqin) {
+        const gender = (guaInfo.userInfo && guaInfo.userInfo.gender) || '';
+        if (gender.indexOf('男') !== -1) { yongShenLiuqin = '妻财'; yongShenNote = '（男占婚姻，取妻财为用）'; }
+        else if (gender.indexOf('女') !== -1) { yongShenLiuqin = '官鬼'; yongShenNote = '（女占婚姻，取官鬼为用）'; }
+        else { yongShenLiuqin = '官鬼'; yongShenNote = '（性别未知，依古法男占财、女占官，暂取官鬼）'; }
+    }
     const yaoDetail = guaInfo.yaoDetail || [];
     const shiYaoIndex = (guaInfo.shiYaoIndex != null) ? guaInfo.shiYaoIndex : -1;
     const fuList = guaInfo.fuShenList || [];
@@ -725,18 +733,18 @@ function xuanYongShen(guaInfo, questionType) {
                 feiRelation:fuShenRelationRW8(feiWx, fuWx), kongType:fuItem.kongType || 'none' };
             const sc = jiWangShuaiScore(fuYao, guaInfo);
             guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:['伏神'], primaryIndex:'伏'+(fuItem.伏神爻位||''),
-                reason:'用神不现，取伏神', priority:[{pos:'伏',score:sc.score,detail:sc.detail}],
+                reason:'用神不现，取伏神' + yongShenNote, priority:[{pos:'伏',score:sc.score,detail:sc.detail}],
                 wangShuaiScore:{index:sc.score,detail:sc.detail} };
             return guaInfo;
         }
-        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:[], primaryIndex:null, reason:'用神不现（本卦与伏神皆无）', priority:[], wangShuaiScore:{index:0,detail:'无'} };
+        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:[], primaryIndex:null, reason:'用神不现（本卦与伏神皆无）' + yongShenNote, priority:[], wangShuaiScore:{index:0,detail:'无'} };
         return guaInfo;
     }
 
     if (positions.length === 1) {
         const idx = positions[0];
         const sc = jiWangShuaiScore(yaoDetail[idx - 1], guaInfo);
-        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:positions, primaryIndex:idx, reason:'用神独现',
+        guaInfo.yongShen = { liuqin:yongShenLiuqin, positions:positions, primaryIndex:idx, reason:'用神独现' + yongShenNote,
             priority:[{pos:idx,score:sc.score,detail:sc.detail}], wangShuaiScore:{index:sc.score,detail:sc.detail} };
         return guaInfo;
     }
@@ -768,11 +776,19 @@ function xuanYongShen(guaInfo, questionType) {
                     const safeItems = items.filter(it => !isShangRW8(it.y, guaInfo));
                     if (safeItems.length === 1) { chosen = safeItems[0]; reason = '舍伤取安（取不受克者）'; }
                     else {
-                        // 兜底：平手取近世爻者
-                        let best = items[0], bestDist = 99;
-                        const ref = (shiYaoIndex < 0) ? 3.5 : shiYaoIndex;
-                        items.forEach(it => { const d = Math.abs(it.idx - ref); if (d < bestDist) { bestDist = d; best = it; } });
-                        chosen = best; reason = '取舍平手，取近世爻者';
+                        // ⑥ 舍其休囚，用其旺相（R0-4）：平手时以旺衰评分最高者为用神
+                        const maxScore = Math.max(...items.map(it => it.sc.score));
+                        const wangItems = items.filter(it => it.sc.score === maxScore);
+                        if (wangItems.length === 1) {
+                            chosen = wangItems[0];
+                            reason = '舍其休囚，用其旺相（旺衰评分最高）';
+                        } else {
+                            // 旺衰评分并列，取近世爻者（原兜底规则）
+                            let best = wangItems[0], bestDist = 99;
+                            const ref = (shiYaoIndex < 0) ? 3.5 : shiYaoIndex;
+                            wangItems.forEach(it => { const d = Math.abs(it.idx - ref); if (d < bestDist) { bestDist = d; best = it; } });
+                            chosen = best; reason = '取舍平手（旺衰相同），取近世爻者';
+                        }
                     }
                 }
             }
@@ -783,7 +799,7 @@ function xuanYongShen(guaInfo, questionType) {
         liuqin: yongShenLiuqin,
         positions: positions,
         primaryIndex: chosen.idx,
-        reason: reason,
+        reason: reason + yongShenNote,
         priority: items.map(it => ({ pos:it.idx, score:it.sc.score, detail:it.sc.detail })),
         wangShuaiScore: { index:chosen.sc.score, detail:chosen.sc.detail }
     };

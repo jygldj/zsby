@@ -642,6 +642,15 @@
 
 <script>
     (function() {
+        // 工具：HTML 转义（R0-1：用户输入进入 DOM 前必须转义，与 history.html 同策略）
+        function escapeHtml(str) {
+            return String(str == null ? '' : str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
         // ============================================================
         // 1. 时间信息函数（基于 lunar-javascript）
         // ============================================================
@@ -1123,8 +1132,8 @@
                     // 其他格式（如数字年）：fallback 到 月建+日辰
                     timeText = `${timeInfo.yueJian || ''}月 ${timeInfo.riChen || ''}日`.replace(/\s+/, ' ').trim();
                 }
-                const userText = `姓名：${userInfo.name || '匿名'}　性别：${userInfo.gender || '未知'}　出生时辰：${userInfo.birth || '未知'}`;
-                const questionText = userInfo.question || '未提供具体问题，请综合解读';
+                const userText = escapeHtml(`姓名：${userInfo.name || '匿名'}　性别：${userInfo.gender || '未知'}　出生时辰：${userInfo.birth || '未知'}`);
+                const questionText = escapeHtml(userInfo.question || '未提供具体问题，请综合解读');
                 const modelName = model === 'qwen' ? '千问 3.7' : '千问备选';
 
                 // 首句校正：无论 AI 返回何种前缀（含偶发"野鹤老人曰"套语），一律强制以固定首句开头
