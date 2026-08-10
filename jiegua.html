@@ -1266,6 +1266,7 @@
                     // ⭐ R4 门类知识库：门类命中优先按门类取用神/断法，未命中回退旧映射
                     const menlei = inferMenLei(question);
                     guaInfo.menlei = menlei || null;
+                    guaInfo.wordNonStandard = !!(question && !menlei);
                     const qTypeRW8 = inferQuestionType(question);
                     xuanYongShen(guaInfo, menlei || qTypeRW8);
                     jiShenChouShen(guaInfo);
@@ -1434,6 +1435,7 @@
                                 <span>❓ 所问：${questionText}</span>
                             </div>
                         </div>
+                        ${guaInfo.wordNonStandard ? `<div style="margin:12px 0;padding:10px 14px;background:#fdecea;border:1px solid #f5c6cb;border-radius:10px;color:#c0392b;font-size:14px;line-height:1.7;">⚠ <strong>所问之事用词不规范</strong>，系统只能<strong>「通解」</strong>——按六爻常理泛论，不作专门门类断语。请改用《使用指南·用户字典》中的标准事情词。</div>` : ''}
                         <div class="body">${resultHtml}</div>
                         ${window.getYongShenDizhi() ? `
                         <div class="tool-bar">

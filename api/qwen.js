@@ -99,7 +99,7 @@ async function callQwen(guaInfo, modelKey) {
     const mc = guaInfo.menleiContext;
     const menleiText = mc
         ? `门类：${mc.menlei}（以${mc.yongShen || '所问'}为用）　断法：${mc.duanFa.join('；')}　应期：${mc.yingqi.join('、')}　持世：${mc.chiShi}`
-        : '未命中知识库门类';
+        : '所问之事用词不规范（系统未匹配到专门门类），老夫只能「通解」——按六爻常理综合泛论，不作专门门类断语。请在《使用指南·用户字典》中使用标准事情词。';
 
     const systemPrompt = `你是一位精通《增删卜易》的六爻占卜专家，以老者口吻释卦，自称"老夫"。断语严谨客观，得古法精髓。
 
