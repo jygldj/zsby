@@ -961,15 +961,59 @@
         }
 
         // ⭐ 阶段2：应期候选展示（供 #resultArea 结果区，数据源 guaInfo.yingqi）
+        // P0-3：在展示层做跨类型全局排序 + 最近优先裁决 + 冲突标注，不动底层 tuiYingQi
         function buildYingqiHtml(guaInfo) {
             const yq = (guaInfo && guaInfo.yingqi) || null;
             if (!yq || !yq.items || !yq.items.length) return '';
-            const rows = yq.items.map(it => {
-                const dates = (it.candidates || []).map(c => c.solar + '(' + c.riChen + ')').join('、');
-                return '<div style="margin-bottom:6px;line-height:1.6;">· <b>' + it.type + '</b>：' + it.yiJu + '　候选：' + dates + '</div>';
-            }).join('');
+            // 1) 摊平所有候选为统一结构
+            const flat = [];
+            yq.items.forEach(it => {
+                (it.candidates || []).forEach(c => {
+                    flat.push({ type: it.type, yiJu: it.yiJu, solar: c.solar, riChen: c.riChen, monthZhi: c.monthZhi });
+                });
+            });
+            // 2) 按公历日升序（YYYY-MM-DD 字典序即时间序）→ 最近优先
+            flat.sort((a, b) => (a.solar < b.solar ? -1 : (a.solar > b.solar ? 1 : 0)));
+            // 3) 冲突标注：同一公历日被 ≥2 个类型命中，即"多法并应"
+            const solarCount = {};
+            flat.forEach(f => { solarCount[f.solar] = (solarCount[f.solar] || 0) + 1; });
+            const rows = flat.map(f => {
+                const conflict = solarCount[f.solar] > 1;
+                const tag = conflict ? '　<span style="color:#c0392b;font-weight:bold;">⚠ 多法并应</span>' : '';
+                return '<div style="margin-bottom:4px;line-height:1.6;">· <b>' + f.type + '</b>：' + f.yiJu
+                    + '　<b style="color:#8b6f47;">' + f.solar + '(' + f.riChen + ')</b>' + tag + '</div>';
+            });
+            // 4) 首选应期（最近一个公历日）
+            const primary = flat.length ? flat[0] : null;
+            const primaryHtml = primary
+                ? '<div style="margin:6px 0 8px;padding:4px 8px;background:#efe6d6;border-radius:6px;font-size:13px;color:#6b4f2a;">🎯 首选应期：<b>' + primary.solar + '(' + primary.riChen + ')</b>　' + primary.type + '</div>'
+                : '';
             return '<div style="margin-top:12px;padding:10px 14px;background:#fbf7f0;border:1px solid #eadfcf;border-radius:8px;font-size:13px;color:#5a4632;">' +
-                '<div style="font-weight:bold;margin-bottom:4px;">⏳ 应期推导（候选公历日）</div>' + rows + '</div>';
+                '<div style="font-weight:bold;margin-bottom:4px;">⏳ 应期推导（按最近优先排序）</div>' + primaryHtml + rows + '</div>';
+        }
+
+        // ⭐ P0-1 断卦依据链面板（供 #resultArea 结果区，数据源 guaInfo.duanGua）
+        // 渲染 suanDuanGua 产出的七步依据链 {chain:[{jueJu,jieLun,yiJu}]} + 综合判定 jiXiong/score
+        function buildDuanGuaHtml(guaInfo) {
+            const dg = (guaInfo && guaInfo.duanGua) || null;
+            if (!dg || !dg.chain || !dg.chain.length) return '';
+            const jxColor = { '吉': '#2e7d32', '中': '#b8860b', '凶': '#c0392b' }[dg.jiXiong] || '#5a4632';
+            const lastIdx = dg.chain.length - 1;
+            const steps = dg.chain.map((c, i) => {
+                const isFinal = (i === lastIdx);
+                const style = isFinal
+                    ? 'margin-bottom:8px;padding:6px 8px;background:#f0e8d8;border-radius:6px;'
+                    : 'margin-bottom:6px;';
+                const yiJu = c.yiJu ? '<div style="font-size:12px;color:#9a8876;margin-top:2px;padding-left:68px;">依据：' + c.yiJu + '</div>' : '';
+                return '<div style="' + style + 'line-height:1.55;">'
+                    + '<span style="display:inline-block;min-width:60px;color:#8b6f47;font-weight:bold;">' + c.jueJu + '</span>'
+                    + '<span style="color:#3a2f20;">' + (c.jieLun || '') + '</span>'
+                    + yiJu + '</div>';
+            }).join('');
+            return '<div style="margin-top:12px;padding:10px 14px;background:#f6f1e8;border:1px solid #e3d8c4;border-radius:8px;font-size:13px;color:#5a4632;">'
+                + '<div style="font-weight:bold;margin-bottom:6px;">🔍 断卦依据链（七步）</div>'
+                + '<div style="display:inline-block;padding:2px 12px;border-radius:30px;color:#fff;background:' + jxColor + ';font-weight:bold;margin-bottom:8px;">综合判定：' + dg.jiXiong + '（评分 ' + dg.score + '）</div>'
+                + steps + '</div>';
         }
 
         // ⭐ R6-1 原案例对照：同卦同时辰命中时展示《增删卜易》原断语
@@ -1328,6 +1372,7 @@
                         </div>
                         ` : ''}
                         <div class="body">${resultHtml}</div>
+                        ${buildDuanGuaHtml(guaInfo)}
                         ${buildYingqiHtml(guaInfo)}
                         ${buildAnliHtml(guaInfo)}
                         <div style="margin-top:14px;font-size:12px;color:#9a8876;border-top:1px solid #e0d3c4;padding-top:12px;">

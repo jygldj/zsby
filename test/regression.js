@@ -101,7 +101,27 @@ assert(g.duanGua && g.duanGua.chain.length >= 8 && ['吉','中','凶'].indexOf(g
 assert(g.duanGua.chain.some(c => c.jueJu === '察门类'), '冒烟 断卦链含察门类步');
 assert(g.yingqi === null || (g.yingqi.items && g.yingqi.items.length > 0), '冒烟 应期引擎结构合法');
 
+// P0 XSS 加固：AI 返回文本经 mdToHtml 后不得含可执行标签（防御 <script>/<img onerror>/<svg onload>/javascript: 链接注入）
+['<script>alert(1)</script>', '<img src=x onerror=alert(1)>', '<svg/onload=alert(1)>', '<a href="javascript:alert(1)">x</a>'].forEach(function(s) {
+    const out = mdToHtml(s);
+    assert(out.indexOf('<script') === -1 && out.indexOf('<img') === -1 && out.indexOf('<svg') === -1 && out.indexOf('<a') === -1,
+        'XSS 加固 mdToHtml 转义恶意标签: ' + s);
+});
 console.log(fail ? ('回归失败 ' + fail + ' 项') : '回归全部通过');
 process.exit(fail ? 1 : 0);
 `;
+// P0 XSS 回归加固：从 jiegua.html 提取真实 mdInline/mdToHtml/mdToPlain 源码执行（零改动系统文件，测真版实现）
+const jhSrc = read('jiegua.html');
+function extractFn(src, name) {
+    const start = src.indexOf('function ' + name);
+    if (start < 0) throw new Error('回归测试：未找到 ' + name);
+    let depth = 0, end = -1;
+    for (let i = src.indexOf('{', start); i < src.length; i++) {
+        if (src[i] === '{') depth++;
+        else if (src[i] === '}') { depth--; if (depth === 0) { end = i + 1; break; } }
+    }
+    return src.slice(start, end);
+}
+eval(extractFn(jhSrc, 'mdInline') + '\n' + extractFn(jhSrc, 'mdToHtml') + '\n' + extractFn(jhSrc, 'mdToPlain'));
+
 eval(shuju + '\n' + suanfa + '\n' + test);
