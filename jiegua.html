@@ -221,6 +221,66 @@
             background: #c0aa94;
             transform: translateY(-2px);
         }
+
+        /* ===== 工具按钮栏：用神应期反查 / 此卦择吉 / 断卦依据链 / 应期推导 统一风格 ===== */
+        .tool-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-start;
+            gap: 10px;
+            margin-top: 14px;
+            padding-top: 12px;
+            border-top: 1px dashed #e0d3c4;
+        }
+        .tool-btn,
+        .tool-details > summary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            min-height: 32px;
+            background: #ede3d7;
+            color: #5a4632;
+            border: 1px solid #c9b49e;
+            border-radius: 30px;
+            padding: 5px 16px;
+            font-size: 13px;
+            font-family: inherit;
+            line-height: 1.4;
+            cursor: pointer;
+            transition: 0.2s;
+            text-decoration: none;
+            box-shadow: none;
+            white-space: nowrap;
+        }
+        .tool-btn:hover,
+        .tool-details > summary:hover {
+            background: #e0d3c4;
+            color: #3f2e1e;
+        }
+        .tool-details {
+            flex: 0 0 auto;
+            position: relative;
+        }
+        .tool-details > summary {
+            list-style: none;
+        }
+        .tool-details > summary::-webkit-details-marker { display: none; }
+        .tool-panel {
+            margin-top: 6px;
+            padding: 10px 14px;
+            background: #fbf7f0;
+            border: 1px solid #c9b49e;
+            border-radius: 12px;
+            font-size: 13px;
+            color: #5a4632;
+        }
+        @media (max-width: 500px) {
+            .tool-bar { gap: 8px; }
+            .tool-btn,
+            .tool-details > summary { font-size: 12px; padding: 5px 12px; }
+        }
+
         #resultArea {
             margin-top: 20px;
             background: #f8f1e8;
@@ -988,9 +1048,9 @@
             const primaryHtml = primary
                 ? '<div style="margin:6px 0 8px;padding:4px 8px;background:#efe6d6;border-radius:6px;font-size:13px;color:#6b4f2a;">🎯 首选应期：<b>' + primary.solar + '(' + primary.riChen + ')</b>　' + primary.type + '</div>'
                 : '';
-            return '<details class="yingqi-details" style="margin-top:12px;">' +
-                '<summary style="display:block;font-weight:bold;color:#5a4632;font-size:14px;cursor:pointer;padding:8px 12px;background:#fbf7f0;border:1px solid #eadfcf;border-radius:8px;">⏳ 应期推导</summary>' +
-                '<div style="padding:10px 14px;background:#fbf7f0;border:1px solid #eadfcf;border-top:none;border-radius:0 0 8px 8px;font-size:13px;color:#5a4632;">' + primaryHtml + rows + '</div></details>';
+            return '<details class="tool-details yingqi-details">' +
+                '<summary class="tool-btn">⏳ 应期推导</summary>' +
+                '<div class="tool-panel">' + primaryHtml + rows + '</div></details>';
         }
 
         // ⭐ P0-1 断卦依据链面板（供 #resultArea 结果区，数据源 guaInfo.duanGua）
@@ -1011,9 +1071,9 @@
                     + '<span style="color:#3a2f20;">' + (c.jieLun || '') + '</span>'
                     + yiJu + '</div>';
             }).join('');
-            return '<details class="duangua-details" style="margin-top:12px;">'
-                + '<summary style="display:block;font-weight:bold;color:#5a4632;font-size:14px;cursor:pointer;padding:8px 12px;background:#f6f1e8;border:1px solid #e3d8c4;border-radius:8px;">🔍 断卦依据链（七步）</summary>'
-                + '<div style="padding:10px 14px;background:#f6f1e8;border:1px solid #e3d8c4;border-top:none;border-radius:0 0 8px 8px;font-size:13px;color:#5a4632;">'
+            return '<details class="tool-details duangua-details">'
+                + '<summary class="tool-btn">🔍 断卦依据链（七步）</summary>'
+                + '<div class="tool-panel">'
                 + '<div style="display:inline-block;padding:2px 12px;border-radius:30px;color:#fff;background:' + jxColor + ';font-weight:bold;margin-bottom:8px;">综合判定：' + dg.jiXiong + '（评分 ' + dg.score + '）</div>'
                 + steps + '</div></details>';
         }
@@ -1365,17 +1425,22 @@
                                 <span>❓ 所问：${questionText}</span>
                             </div>
                         </div>
-                        ${window.getYongShenDizhi() ? `
-                        <div class="user-row" style="margin-top:12px;padding-top:12px;border-top:1px dashed #e0d3c4;display:flex;flex-wrap:wrap;align-items:center;gap:10px;">
-                            <a href="wnl.html?yingqi=${window.getYongShenDizhi()}日" class="zeji-btn" style="display:inline-block;background:#b09a84;color:#2d241c;padding:5px 16px;border-radius:30px;font-size:13px;text-decoration:none;border:1px solid #c9b49e;transition:0.2s;" onmouseover="this.style.background='#c0aa94'" onmouseout="this.style.background='#b09a84'">🗓️ 用神应期反查（查临值公历日）</a>
-                            ${guaInfo && guaInfo.yongShen && guaInfo.yongShen.primaryIndex != null && guaInfo.yongShen.liuqin ? `
-                            <button onclick="goZejiForGua()" class="zeji-btn" style="display:inline-block;background:#2980b9;color:#fff;padding:5px 16px;border-radius:30px;font-size:13px;border:1px solid #2471a3;cursor:pointer;font-family:inherit;transition:0.2s;" onmouseover="this.style.background='#2471a3'" onmouseout="this.style.background='#2980b9'">🔮 为此卦择吉（${guaInfo.yongShen.liuqin}旺衰注入）</button>
-                            ` : ''}
-                        </div>
-                        ` : ''}
                         <div class="body">${resultHtml}</div>
-                        ${buildDuanGuaHtml(guaInfo)}
-                        ${buildYingqiHtml(guaInfo)}
+                        ${window.getYongShenDizhi() ? `
+                        <div class="tool-bar">
+                            <a href="wnl.html?yingqi=${window.getYongShenDizhi()}日" class="tool-btn">🗓️ 用神应期反查</a>
+                            ${guaInfo && guaInfo.yongShen && guaInfo.yongShen.primaryIndex != null && guaInfo.yongShen.liuqin ? `
+                            <button onclick="goZejiForGua()" class="tool-btn">🔮 此卦择吉</button>
+                            ` : ''}
+                            ${buildDuanGuaHtml(guaInfo)}
+                            ${buildYingqiHtml(guaInfo)}
+                        </div>
+                        ` : `
+                        <div class="tool-bar">
+                            ${buildDuanGuaHtml(guaInfo)}
+                            ${buildYingqiHtml(guaInfo)}
+                        </div>
+                        `}
                         ${buildAnliHtml(guaInfo)}
                         <div style="margin-top:14px;font-size:12px;color:#9a8876;border-top:1px solid #e0d3c4;padding-top:12px;">
                             🗨️ 卦象解读 · 时空对话　${new Date().toLocaleString('zh-CN')}
@@ -1390,13 +1455,13 @@
                         if (s) s.textContent = d.open ? '▲ 收起专业详解' : '▼ 专业详解';
                     });
                 });
-                // 断卦依据链 / 应期推导：默认关闭，展开后 summary 文案切换为"关闭"
+                // 断卦依据链 / 应期推导：默认关闭，展开后 summary 文案切换为"▲ 关闭"
                 document.querySelectorAll('.duangua-details, .yingqi-details').forEach(function(d) {
                     d.addEventListener('toggle', function() {
                         const s = d.querySelector('summary');
                         if (!s) return;
                         s.textContent = d.open
-                            ? '关闭'
+                            ? '▲ 关闭'
                             : (d.classList.contains('duangua-details') ? '🔍 断卦依据链（七步）' : '⏳ 应期推导');
                     });
                 });
