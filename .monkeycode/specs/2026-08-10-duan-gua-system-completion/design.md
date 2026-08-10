@@ -82,22 +82,24 @@ guaInfo.yingqi = {
 
 ### 门类知识库（并入 `ly/suanfa.js`）
 
-`QUESTION_TO_YONGSHEN`（suanfa.js:29）与 `inferQuestionType`（jiegua.html:840）收敛为单一来源：
+门类判定与用神规则收敛为单一来源，新增 `MENLEI_ZHISHI`/`inferMenLei`/`getYongShenByMenLei`/`applyMenLeiContext`；旧 `QUESTION_TO_YONGSHEN` 保留为未命中回退兜底并补齐 12 门类键（`疾病/行人归期/子嗣胎孕/家宅迁移/终身财福/趋避防灾`），不破坏 rw7/rw8 既有查询：
 
 ```js
 const MENLEI_ZHISHI = {
   '婚姻': {
-    yongShen: (g) => g.gender === '男' ? '妻财' : '官鬼',
-    duanFa: ['看财官世应合冲', '看父母(翁姑)是否克害', '看子嗣伏神'],
+    yongShen: '官鬼',                       // 性别分流在 getYongShenByMenLei：男取妻财、女取官鬼
+    duanFa: ['看财官世应生克', '看父母(翁姑)吉凶', '看子孙爻与胎位伏神'],
     yingqi: ['合住待冲', '空破待填实'],
-    chiShi: '财持世吉、兄持世难求'
+    chiShi: '财持世吉，兄持世难求'
   },
   // 功名/求财/疾病/出行/行人归期/诉讼/失物/子嗣胎孕/家宅迁移/终身财福/趋避防灾
 }
-function inferMenLei(question) {}             // 收敛 inferQuestionType，返回门类
-function getYongShenByMenLei(guaInfo, menlei) {} // 依据 yongShen 规则(含性别/自占代占)
-function applyMenLeiContext(guaInfo) {}       // 断法/应期/持世要点并入 duanGua.chain 与 AI 上下文
+function inferMenLei(question) {}              // 12 门类关键词收敛，未命中返回 null
+function getYongShenByMenLei(guaInfo, menlei) {} // 门类用神(婚姻按性别分流)，未命中回退 QUESTION_TO_YONGSHEN
+function applyMenLeiContext(guaInfo) {}        // 断法/应期/持世要点写入 menleiContext
 ```
+
+调用链：`inferMenLei(question)` → `guaInfo.menlei` → `xuanYongShen(guaInfo, menlei || qTypeRW8)` → `applyMenLeiContext(guaInfo)` → `suanDuanGua` 在步6与步7之间插入「察门类」步（不参与吉凶计分，仅并入依据链）。未命中时 `menlei=null`、`menleiContext=null`，回退旧映射并在断卦链注明。
 
 ### 原案例表（并入 `ly/suanfa.js`）
 
@@ -113,7 +115,7 @@ function findAnli(guaMing, riChen) {}  // 同卦同时辰(或同卦)匹配，返
 
 | 文件 | 修改点 |
 |---|---|
-| `ly/suanfa.js` | 追加卦象增强函数组、`tuiYingQi`、`MENLEI_ZHISHI`、`ANLI`（R1/R3/R4/R6）；`xuanYongShen`(704) 排序链插入旺衰评分判据（R0-4）；`QUESTION_TO_YONGSHEN` 移除，改委托 `inferMenLei/getYongShenByMenLei`（R4）；`jiWangShuaiScore`(663) 增加太岁可选维度（R1-7） |
+| `ly/suanfa.js` | 追加卦象增强函数组、`tuiYingQi`、`MENLEI_ZHISHI`、`inferMenLei`、`getYongShenByMenLei`、`applyMenLeiContext`、`ANLI`（R1/R3/R4/R6）；`xuanYongShen`(704) 排序链插入旺衰评分判据（R0-4）；`QUESTION_TO_YONGSHEN` 保留为回退并补 12 门类键（R4）；`jiWangShuaiScore`(663) 增加太岁可选维度（R1-7） |
 | `ly/zhukong.js` | `renderFinalResult`(254-261) 六神日干改从 `guaData.timeInfo.riChen` 取（R0-2）；排盘后调用 `suanQuanBuGuaXiang` 与 `tuiYingQi` |
 | `jiegou.html` | `applyManualTimeInfo`(167) 保持回写不变；`completeBtn` 回调后追加卦象增强计算 |
 | `jiegua.html` | `userText/questionText`(1126-1128) 渲染前 `escapeHtml`（R0-1）；`buildMarksHtml`(857) 与断卦参数区(1189/1227) 展示新要素；`callQwen` userPrompt 并入断卦链与应期（R5） |
@@ -151,6 +153,13 @@ function findAnli(guaMing, riChen) {}  // 同卦同时辰(或同卦)匹配，返
   "yingqi": {
     "type": "出空", "yiJu": "用神旬空，出旬值日",
     "candidates": [{ "solar": "2026-08-17", "riChen": "乙丑", "monthZhi": "申" }]
+  },
+  "menlei": "求财",
+  "menleiContext": {
+    "menlei": "求财", "yongShen": "妻财",
+    "duanFa": ["看财爻旺衰", "看子孙爻(财源)", "看兄弟爻(劫财)"],
+    "yingqi": ["财逢空待出空", "财临值之日"],
+    "chiShi": "财持世易得，兄持世防耗"
   }
 }
 ```
@@ -170,7 +179,7 @@ function findAnli(guaMing, riChen) {}  // 同卦同时辰(或同卦)匹配，返
 
 - 任一增强计算抛错：`try/catch` 捕获，对应字段置 `null`/空数组，UI 显示"—"，不阻塞既有排盘
 - `tuiYingQi` 扫描越界（起始日期非法）：回退当日并 `console.warn`
-- 门类未命中：`yongShen` 沿用现有映射兜底，`reason` 注明"未命中知识库"
+- 门类未命中：`menlei=null`，`xuanYongShen` 沿用现有映射兜底，`menleiContext=null`，断卦链不产生「察门类」步
 - `findAnli` 无匹配：返回 `null`，UI 不提示对照
 - 卦象增强函数为纯函数且惰性调用（排盘时执行），缺失或抛错时静默降级，不影响核心排盘
 

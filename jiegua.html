@@ -1135,9 +1135,13 @@
 
                 // ⭐ rw8 新增：用神两现选取 + 旺衰评分 + 忌神/仇神连带（仅挂 guaInfo，供 qwen.js 增强版消费）
                 try {
+                    // ⭐ R4 门类知识库：门类命中优先按门类取用神/断法，未命中回退旧映射
+                    const menlei = inferMenLei(question);
+                    guaInfo.menlei = menlei || null;
                     const qTypeRW8 = inferQuestionType(question);
-                    xuanYongShen(guaInfo, qTypeRW8);
+                    xuanYongShen(guaInfo, menlei || qTypeRW8);
                     jiShenChouShen(guaInfo);
+                    applyMenLeiContext(guaInfo);
                     const ysEl = document.getElementById('yongShenMarks');
                     if (ysEl) {
                         ysEl.innerHTML = buildYongShenHtml(guaInfo);
@@ -1177,6 +1181,8 @@
                     guaData.guaXiang = guaInfo.guaXiang || null;
                     guaData.yingqi = guaInfo.yingqi || null;
                     guaData.duanGua = guaInfo.duanGua || null;
+                    guaData.menlei = guaInfo.menlei || null;
+                    guaData.menleiContext = guaInfo.menleiContext || null;
                     // ⭐ rw9：把 yaoDetail / fuShenList 一并并入 currentGua，供 goZejiForGua 取用神真实地支（含伏神支路）
                     guaData.yaoDetail = guaInfo.yaoDetail || [];
                     guaData.fuShenList = guaInfo.fuShenList || [];

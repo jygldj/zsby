@@ -30,6 +30,7 @@ const QUESTION_TO_YONGSHEN = {
     '婚姻':'官鬼', '感情':'官鬼', '妻财问事':'妻财',
     '财运':'妻财', '求财':'妻财', '失物':'妻财',
     '事业':'官鬼', '功名':'官鬼', '工作':'官鬼', '诉讼':'官鬼', '官司':'官鬼', '健康':'官鬼', '病':'官鬼',
+    '疾病':'官鬼', '行人归期':'子孙', '子嗣胎孕':'子孙', '家宅迁移':'父母', '终身财福':'妻财', '趋避防灾':'官鬼',
     '学业':'父母', '考试':'父母', '文书':'父母', '出行':'父母', '旅行':'父母',
     '寻人':'子孙', '子孙':'子孙'
 };
@@ -1379,10 +1380,174 @@ function suanDuanGua(guaInfo) {
     }
     if (guaXiang.duFa === '六爻安静') { add('察卦象', '六爻安静', '事未发动，吉凶未显，待时而动'); }
 
+    // 步6.5 察门类（知识库命中时并入断法要点）
+    if (guaInfo.menlei && guaInfo.menleiContext) {
+        const mc = guaInfo.menleiContext;
+        const yongShenText = mc.yongShen ? ('以' + mc.yongShen + '为用') : '用神按所问取';
+        add('察门类', guaInfo.menlei + '门类：' + yongShenText,
+            (mc.duanFa.length ? '断法：' + mc.duanFa.join('；') : '') +
+            (mc.yingqi.length ? '　应期：' + mc.yingqi.join('、') : '') +
+            (mc.chiShi ? '　持世：' + mc.chiShi : ''));
+    }
+
     // 步7 综合结论
     const jiXiong = score > 0 ? '吉' : (score < 0 ? '凶' : '中');
     add('综合结论', jiXiong + '（吉凶评分' + score + '）', chain.slice(0, chain.length - 1).map(c => c.jieLun).join('；'));
 
     guaInfo.duanGua = { chain: chain, jiXiong: jiXiong, score: score };
+    return guaInfo;
+}
+
+// ============================================================
+// 十、R4 门类知识库（12 门类，以《增删卜易》为纲）
+// ============================================================
+const MENLEI_ZHISHI = {
+    '婚姻': {
+        yongShen: '官鬼',
+        duanFa: ['看财官世应生克', '看父母爻(翁姑)吉凶', '看子孙爻与胎位伏神'],
+        yingqi: ['合住待冲', '空破待填实', '官财旺相主吉'],
+        chiShi: '财持世吉，兄持世难求'
+    },
+    '功名': {
+        yongShen: '官鬼',
+        duanFa: ['看官鬼爻旺衰为功名主', '看父母爻(文书)', '看世爻身位'],
+        yingqi: ['官星旺相逢生扶应期', '空破待出空出月'],
+        chiShi: '官持世吉，财持世助官'
+    },
+    '求财': {
+        yongShen: '妻财',
+        duanFa: ['看财爻旺衰', '看子孙爻(财源)', '看兄弟爻(劫财)'],
+        yingqi: ['财逢空待出空', '财临值之日'],
+        chiShi: '财持世易得，兄持世防耗'
+    },
+    '疾病': {
+        yongShen: '官鬼',
+        duanFa: ['看官鬼爻为病', '看子孙爻(医药)', '看用神(占何人病)'],
+        yingqi: ['用神出空', '官爻受制之日'],
+        chiShi: '世爻空破病难愈，官星旺相主病重'
+    },
+    '出行': {
+        yongShen: '父母',
+        duanFa: ['看世爻旺衰主自身', '看应爻为目的地', '看官鬼为阻隔'],
+        yingqi: ['世爻旺相即行', '官爻克世防阻'],
+        chiShi: '世旺可行，世空破不宜动'
+    },
+    '行人归期': {
+        yongShen: '子孙',
+        duanFa: ['看用神伏现', '看用神合冲', '看用神旬空'],
+        yingqi: ['用神出空之日归', '逢冲之日归'],
+        chiShi: '用神生世归速，克世主有阻'
+    },
+    '诉讼': {
+        yongShen: '官鬼',
+        duanFa: ['看官鬼为官府', '看世应谁克谁', '看文书父母爻'],
+        yingqi: ['官旺之日', '世应合冲之日'],
+        chiShi: '世克应我胜，应克世彼胜'
+    },
+    '失物': {
+        yongShen: '妻财',
+        duanFa: ['看财爻为失物', '看财爻旬空', '看玄武爻为窃盗'],
+        yingqi: ['财爻出空可寻', '财爻冲合之日'],
+        chiShi: '财持世易寻，兄持世难找'
+    },
+    '子嗣胎孕': {
+        yongShen: '子孙',
+        duanFa: ['看子孙爻旺衰', '看胎位伏神', '看官鬼为孕病'],
+        yingqi: ['子孙旺相之时', '子孙临值之日'],
+        chiShi: '子孙持世易得，官鬼持世防流产'
+    },
+    '家宅迁移': {
+        yongShen: '父母',
+        duanFa: ['看父母爻为宅', '看二爻为宅位', '看官鬼为祸患'],
+        yingqi: ['父母旺相之时', '冲合父母之日'],
+        chiShi: '父母持世宅安，官鬼持世防灾'
+    },
+    '终身财福': {
+        yongShen: '妻财',
+        duanFa: ['看财爻旺衰为财福', '看世爻终身', '看官父为寿'],
+        yingqi: ['逢生扶之年月', '财爻旺相之时'],
+        chiShi: '财持世福厚，世空破福薄'
+    },
+    '趋避防灾': {
+        yongShen: '官鬼',
+        duanFa: ['看官鬼为灾', '看世爻受克否', '看子孙为解神'],
+        yingqi: ['官爻受制之日', '世爻得生之时'],
+        chiShi: '子孙持世可解，官鬼持世防灾'
+    }
+};
+
+// 门类关键词表（长词优先，避免"官/子/找"等单字误判）
+const MENLEI_KEYWORDS = [
+    ['婚姻', ['婚姻', '姻缘', '婚', '妻', '夫', '对象', '感情', '嫁', '娶', '婚配']],
+    ['功名', ['功名', '仕途', '官职', '升职', '晋升', '求职', '仕', '事业', '工作', '职业']],
+    ['求财', ['财运', '财', '生意', '赚钱', '股票', '投资', '买卖', '求财', '开张']],
+    ['疾病', ['疾病', '病', '健康', '身体', '医', '病痛', '康复', '病情', '就诊']],
+    ['出行', ['出行', '旅行', '旅游', '远行', '出差', '旅途', '远门']],
+    ['行人归期', ['行人', '归期', '何时归', '何时回', '回来', '归来', '寻人', '找人']],
+    ['诉讼', ['诉讼', '官司', '官非', '打官司', '口舌', '纠纷', '是非']],
+    ['失物', ['失物', '丢', '遗失', '丢失', '找', '寻']],
+    ['子嗣胎孕', ['孕', '怀孕', '胎', '子嗣', '求子', '生子', '得子', '添丁', '小孩', '孩子', '子女', '生儿']],
+    ['家宅迁移', ['家宅', '住宅', '搬家', '迁居', '乔迁', '买房', '建房', '修房', '风水', '宅']],
+    ['终身财福', ['终身', '命运', '一生', '前程', '命理', '财福']],
+    ['趋避防灾', ['趋避', '防灾', '避祸', '避灾', '平安', '保平安', '化解', '破灾']]
+];
+
+/**
+ * R4-1 门类推断：问辞 → 12 门类之一（收敛旧 inferQuestionType 的关键词判定）
+ * @param {string} question - 用户所问之事
+ * @returns {string|null} 门类名；未命中返回 null
+ */
+function inferMenLei(question) {
+    if (!question) return null;
+    const q = question.toLowerCase();
+    for (const [menlei, words] of MENLEI_KEYWORDS) {
+        for (const w of words) {
+            if (q.indexOf(w) !== -1) return menlei;
+        }
+    }
+    return null;
+}
+
+/**
+ * R4-2 门类用神：返回门类定义的用神六亲（婚姻/感情按性别分流）
+ * @param {object} guaInfo - 卦信息（需含 userInfo.gender）
+ * @param {string} menlei - 门类名
+ * @returns {string|null}
+ */
+function getYongShenByMenLei(guaInfo, menlei) {
+    const entry = MENLEI_ZHISHI[menlei];
+    if (!entry) return QUESTION_TO_YONGSHEN[menlei] || null;
+    if (menlei === '婚姻' || menlei === '感情') {
+        const gender = (guaInfo.userInfo && guaInfo.userInfo.gender) || '';
+        if (gender.indexOf('男') !== -1) return '妻财';
+        if (gender.indexOf('女') !== -1) return '官鬼';
+    }
+    return entry.yongShen || QUESTION_TO_YONGSHEN[menlei] || null;
+}
+
+/**
+ * R4-3 门类上下文：断法要点/应期要点/持世吉凶并入 guaInfo.menleiContext，
+ *        供 suanDuanGua 察门类步骤与 AI 上下文使用
+ * @param {object} guaInfo
+ * @returns {object} guaInfo
+ */
+function applyMenLeiContext(guaInfo) {
+    const ml = guaInfo.menlei;
+    if (!ml) {
+        guaInfo.menleiContext = null;
+        return guaInfo;
+    }
+    const entry = MENLEI_ZHISHI[ml];
+    if (!entry) {
+        guaInfo.menleiContext = null;
+        return guaInfo;
+    }
+    guaInfo.menleiContext = {
+        menlei: ml,
+        yongShen: getYongShenByMenLei(guaInfo, ml),
+        duanFa: entry.duanFa || [],
+        yingqi: entry.yingqi || [],
+        chiShi: entry.chiShi || ''
+    };
     return guaInfo;
 }
