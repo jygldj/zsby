@@ -1390,8 +1390,13 @@ function suanDuanGua(guaInfo) {
             (mc.chiShi ? '　持世：' + mc.chiShi : ''));
     }
 
-    // 步7 综合结论
-    const jiXiong = score > 0 ? '吉' : (score < 0 ? '凶' : '中');
+    // 步7 综合结论（五档分级：大吉/吉/中/小凶/凶，警示适度不伤人）
+    let jiXiong;
+    if (score >= 3) jiXiong = '大吉';
+    else if (score >= 1) jiXiong = '吉';
+    else if (score === 0) jiXiong = '中';
+    else if (score >= -2) jiXiong = '小凶';
+    else jiXiong = '凶';
     add('综合结论', jiXiong + '（吉凶评分' + score + '）', chain.slice(0, chain.length - 1).map(c => c.jieLun).join('；'));
 
     guaInfo.duanGua = { chain: chain, jiXiong: jiXiong, score: score };

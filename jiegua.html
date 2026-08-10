@@ -1072,7 +1072,7 @@
         function buildDuanGuaHtml(guaInfo) {
             const dg = (guaInfo && guaInfo.duanGua) || null;
             if (!dg || !dg.chain || !dg.chain.length) return '';
-            const jxColor = { '吉': '#2e7d32', '中': '#b8860b', '凶': '#c0392b' }[dg.jiXiong] || '#5a4632';
+            const jxColor = { '大吉': '#1b5e20', '吉': '#2e7d32', '中': '#b8860b', '小凶': '#d68910', '凶': '#c0392b' }[dg.jiXiong] || '#5a4632';
             const lastIdx = dg.chain.length - 1;
             const steps = dg.chain.map((c, i) => {
                 const isFinal = (i === lastIdx);
