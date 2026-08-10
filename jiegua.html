@@ -1223,8 +1223,21 @@
                 } catch(e) { console.warn('rw7 字段回写 currentGua 失败:', e); }
 
                 // 调用对应模型的API（双模型共用 callQwen，modelKey 取 radio 值）
+                // 韧性增强：主模型失败若属额度/限流类错误，自动切换备选模型重试一次
+                let usedModel = model;
                 let result = '';
-                result = await callQwen(guaInfo, model);
+                try {
+                    result = await callQwen(guaInfo, model);
+                } catch (err) {
+                    const retryable = /额度|quota|欠费|arrear|throttl|rate.?limit|限流|429|free tier|free quota/i.test(err.message || '');
+                    if (retryable && model === 'qwen') {
+                        console.warn('主模型额度受限，自动切换备选模型重试:', err.message);
+                        result = await callQwen(guaInfo, 'qwen2');
+                        usedModel = 'qwen2';
+                    } else {
+                        throw err;
+                    }
+                }
 
                 // 显示结果
                 // 构建简洁干支年月日（去掉"手动输入"/时辰/"（公历）""（农历）"等冗余信息）
@@ -1239,7 +1252,7 @@
                 }
                 const userText = escapeHtml(`姓名：${userInfo.name || '匿名'}　性别：${userInfo.gender || '未知'}　出生时辰：${userInfo.birth || '未知'}`);
                 const questionText = escapeHtml(userInfo.question || '未提供具体问题，请综合解读');
-                const modelName = model === 'qwen' ? '千问 3.7' : '千问备选';
+                const modelName = usedModel === 'qwen' ? '千问 3.7' : '千问备选';
 
                 // 首句校正：无论 AI 返回何种前缀（含偶发"野鹤老人曰"套语），一律强制以固定首句开头
                 const expectedOpen = `君有疑惑，询问${userInfo.question || '此事'}，求得《${guaData.benGuaName}》之《${guaData.bianGuaName}》，今老夫为你释疑：`;
@@ -1366,13 +1379,24 @@ ${cleanResult}
                 } catch(e) { console.warn('回写历史解读失败:', e); }
 
             } catch(error) {
+                const errMsg = error.message || '请检查API配置';
+                let hint = '请确认服务端已配置 QWEN_API_KEY / QWEN2_API_KEY 环境变量后重新部署';
+                if (/额度|quota|欠费|arrear|付费|充值/.test(errMsg)) {
+                    hint = '请在阿里云百炼控制台处理额度问题（关闭"仅免费额度"模式、充值或更换有额度的 API Key），并确认备选模型 QWEN2_API_KEY 也已配置';
+                } else if (/无效|失效|认证失败|401|invalid.?key/i.test(errMsg)) {
+                    hint = '请核对服务端 QWEN_API_KEY / QWEN2_API_KEY 环境变量是否正确后重新部署';
+                } else if (/模型|不存在|未开通/.test(errMsg)) {
+                    hint = '请确认阿里云百炼控制台已开通对应模型后重试';
+                } else if (/限流|频繁|429/.test(errMsg)) {
+                    hint = '当前请求过频被限流，请稍后重试';
+                }
                 resultArea.innerHTML = `
                     <div class="result-content">
                         <div style="color:#b33;text-align:center;padding:20px 0;">
-                            ⚠️ 解卦失败：${error.message || '请检查API配置'}
+                            ⚠️ 解卦失败：${escapeHtml(errMsg)}
                         </div>
                         <div style="font-size:13px;color:#7a6652;text-align:center;margin-top:8px;">
-                            💡 提示：请确认服务端已配置 QWEN_API_KEY / QWEN2_API_KEY 环境变量后重新部署
+                            💡 ${escapeHtml(hint)}
                         </div>
                     </div>
                 `;

@@ -55,6 +55,29 @@ function json(body, status, extra) {
   return new Response(JSON.stringify(body), { status: status || 200, headers });
 }
 
+// 上游错误友好化：把百炼的英文错误映射为可操作的中文提示（保留未知错误原文）
+function friendlyError(message, status) {
+  const m = (message || '').toString();
+  if (/free quota|quota exhausted|quota insufficient|quota has been used up|quota exceeded/i.test(m)) {
+    return '模型免费额度已用尽：请在阿里云百炼控制台关闭"仅免费额度"模式（开通按量付费）或充值后重试，或更换未欠费的 API Key';
+  }
+  if (/arrearage|arrears|欠费|no balance|insufficient balance/i.test(m)) {
+    return '账户欠费或未开通按量付费：请在阿里云百炼控制台充值并开通按量付费后重试';
+  }
+  if (/invalidapikey|unauthorized|invalid api key|access denied/i.test(m)) {
+    return 'API Key 无效或已失效：请核对服务端 QWEN_API_KEY / QWEN2_API_KEY 环境变量后重新部署';
+  }
+  if (/model.*(not.*exist|not found|not support)|invalid.*model|modelname/i.test(m)) {
+    return '模型不存在或未开通访问权限：请确认百炼控制台已开通对应模型';
+  }
+  if (/throttl|rate.?limit|too many requests|slow down/i.test(m)) {
+    return '请求过于频繁，已触发限流，请稍后重试';
+  }
+  if (status === 429) return '请求过多或额度受限（HTTP 429），请稍后重试';
+  if (status === 401) return '身份认证失败（HTTP 401）：请检查 API Key 是否有效';
+  return message;
+}
+
 // 判定请求来源是否可信：
 // - 有 Origin 头（浏览器跨站请求）：须命中白名单前缀（含端口）
 // - 有 Referer 头：取源（scheme+host）校验
@@ -149,7 +172,7 @@ async function handle(request, env) {
         const err = await upstream.json();
         if (err && err.error && err.error.message) message = err.error.message;
       } catch (e) { /* 忽略非 JSON 响应 */ }
-      return json({ error: message }, 502);
+      return json({ error: friendlyError(message, upstream.status) }, 502);
     }
 
     const data = await upstream.json();
