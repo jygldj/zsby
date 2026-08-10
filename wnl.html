@@ -475,7 +475,10 @@
                 <div class="calendar-grid" id="calendarGrid"></div>
             </div>
             <div class="yingqi-section mobile-sheet" data-sheet="yingqi" id="yingqiSection" style="display:none;">
-                <div class="yingqi-title" id="yingqiTitle">应期反查结果</div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                    <div class="yingqi-title" id="yingqiTitle" style="margin-bottom:0;">应期反查结果</div>
+                    <button type="button" onclick="yingqiGoBack()" style="flex:0 0 auto;background:#ede3d7;color:#5a4632;border:1px solid #c9b49e;border-radius:20px;padding:4px 14px;font-size:13px;font-family:inherit;cursor:pointer;transition:0.2s;" onmouseover="this.style.background='#e0d3c4'" onmouseout="this.style.background='#ede3d7'">← 返回</button>
+                </div>
                 <div class="yingqi-list" id="yingqiList"></div>
             </div>
             <div class="yingqi-section mobile-sheet" data-sheet="zeji" id="zejiResultSection" style="display:none;">
@@ -490,7 +493,7 @@
                 <div class="hl-placeholder">点击日历中任意一日<br>查看当日黄历通书</div>
             </div>
             <div class="zeji-section mobile-sheet" data-sheet="zeji" id="zejiSection">
-                <div class="zeji-title">🔮 择吉助手</div>
+                <div class="zeji-title" id="zeji-assistant">🔮 择吉助手</div>
                 <div class="zeji-row">
                     <select id="zejiCategory">
                         <option value="">选择事项…</option>
@@ -620,7 +623,7 @@
     // 事项→questionType 映射（联卦模式自动选中事项）
     var QUESTION_TO_CATEGORY = {
         '婚姻': '嫁娶', '感情': '嫁娶',
-        '财运': '交易', '求财': '交易', '失物': '交易',
+        '财运': '交易', '求财': '交易', '交易': '交易', '失物': '交易',
         '事业': '开业', '工作': '开业', '功名': '入学',
         '健康': '求医', '病': '求医',
         '出行': '出行', '旅行': '出行',
@@ -1228,6 +1231,17 @@
         });
     }
 
+    // 应期反查结果卡「返回」：优先回退到来源页（释卦页），否则回到释卦页
+    window.yingqiGoBack = function(){
+        try {
+            if (document.referrer && document.referrer.indexOf('jiegua.html') !== -1) {
+                history.back();
+                return;
+            }
+        } catch(e) {}
+        location.href = 'jiegua.html';
+    };
+
     // ============ 右栏：黄历通书 ============
     function renderHuangli(y, m, d){
         var lunar = lunarOf(y, m, d);
@@ -1693,6 +1707,13 @@
             zejiHint.style.display = '';
             // 自动扫描
             if(cat) setTimeout(function(){ doScanZeji(cat); }, 100);
+            // 电脑端：跳转后滚动到择吉助手卡片（手机端 ≤900px 保持现状，不滚动）
+            if (window.matchMedia && window.matchMedia('(min-width: 901px)').matches) {
+                setTimeout(function(){
+                    var el = document.getElementById('zeji-assistant');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 200);
+            }
         } else if(ZEJI_CATEGORIES[zj]){
             // 纯事项模式
             for(var i = 0; i < zejiCategory.options.length; i++){

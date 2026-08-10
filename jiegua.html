@@ -259,8 +259,14 @@
             color: #3f2e1e;
         }
         .tool-details {
-            flex: 0 0 auto;
+            flex: 0 1 auto;
+            min-width: 0;
+            max-width: 100%;
             position: relative;
+        }
+        /* 展开后独占整行，使面板撑满容器宽度，杜绝右侧溢出 */
+        .tool-details[open] {
+            flex: 1 1 100%;
         }
         .tool-details > summary {
             list-style: none;
@@ -274,6 +280,9 @@
             border-radius: 12px;
             font-size: 13px;
             color: #5a4632;
+            max-width: 100%;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         @media (max-width: 500px) {
             .tool-bar { gap: 8px; }
@@ -919,7 +928,7 @@
             const q = question.toLowerCase();
             const map = [
                 ['婚姻','婚姻'],['姻缘','婚姻'],['感情','感情'],['妻','婚姻'],['夫','婚姻'],['对象','婚姻'],['婚','婚姻'],
-                ['财','财运'],['生意','财运'],['求财','财运'],['赚钱','财运'],['股票','财运'],['投资','财运'],
+                ['财','财运'],['生意','财运'],['求财','财运'],['交易','财运'],['赚钱','财运'],['股票','财运'],['投资','财运'],
                 ['事业','事业'],['工作','事业'],['官','事业'],['升职','事业'],['求职','事业'],['官司','诉讼'],['诉讼','诉讼'],
                 ['学','学业'],['考试','学业'],['考','学业'],['文','学业'],
                 ['病','健康'],['健康','健康'],['身体','健康'],['医','健康'],
@@ -1072,7 +1081,7 @@
                     + yiJu + '</div>';
             }).join('');
             return '<details class="tool-details duangua-details">'
-                + '<summary class="tool-btn">🔍 断卦依据链（七步）</summary>'
+                + '<summary class="tool-btn">🔍 断卦依据</summary>'
                 + '<div class="tool-panel">'
                 + '<div style="display:inline-block;padding:2px 12px;border-radius:30px;color:#fff;background:' + jxColor + ';font-weight:bold;margin-bottom:8px;">综合判定：' + dg.jiXiong + '（评分 ' + dg.score + '）</div>'
                 + steps + '</div></details>';
@@ -1462,7 +1471,7 @@
                         if (!s) return;
                         s.textContent = d.open
                             ? '▲ 关闭'
-                            : (d.classList.contains('duangua-details') ? '🔍 断卦依据链（七步）' : '⏳ 应期推导');
+                            : (d.classList.contains('duangua-details') ? '🔍 断卦依据' : '⏳ 应期推导');
                     });
                 });
 
