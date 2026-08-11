@@ -1331,9 +1331,11 @@ function suanDuanGua(guaInfo) {
         const sc = jiWangShuaiScore(yongYao, guaInfo);
         const wangShuai = sc.score > 0 ? '旺相' : (sc.score < 0 ? '休囚' : '平');
         add('察旺衰', '用神' + yongYao.dizhi + ' ' + wangShuai + '(评分' + sc.score + ')', sc.detail || '月日生克综合');
-        score += (sc.score > 0 ? 1 : (sc.score < 0 ? -1 : 0));
-        if (yongYao.yuePo) { add('察旺衰', '用神月破', '月建' + yueJian + '冲' + yongYao.dizhi + '，根枯难用'); score--; }
-        if (yongYao.kongType && yongYao.kongType !== 'none') { add('察旺衰', '用神旬空', '逢空，事成须待出空'); score--; }
+        // P1 权重（用神为尊）：用神本体一等 ±2，月破/真空重罚
+        score += (sc.score > 0 ? 2 : (sc.score < 0 ? -2 : 0));
+        if (yongYao.yuePo) { add('察旺衰', '用神月破', '月建' + yueJian + '冲' + yongYao.dizhi + '，根枯难用'); score -= 2; }
+        if (yongYao.kongType === '真空') { add('察旺衰', '用神真空', '旬空且无生扶，如石沉大海终不可得'); score -= 2; }
+        else if (yongYao.kongType === '假空') { add('察旺衰', '用神旬空', '逢空，事成须待出空'); score--; }
     } else if (yongShen && yongShen.dizhi) {
         add('察旺衰', '用神伏藏(' + yongShen.dizhi + ')', '伏神之旺衰以飞伏生克论');
     } else {
@@ -1347,9 +1349,9 @@ function suanDuanGua(guaInfo) {
     if (yongYao) {
         if (yongYao.isDong) {
             const ht = yongYao.huiTou || null;
-            if (ht && ht.type === '化进神') { add('观动静', '用神发动化进', '动而化进神，其力倍增'); score++; }
-            else if (ht && ht.type === '回头生') { add('观动静', '用神发动回头生', '变爻生用神，动而有力'); score++; }
-            else if (ht && (ht.type === '化退神' || ht.type === '回头克' || ht.type === '化墓' || ht.type === '化绝' || ht.type === '化破')) { add('观动静', '用神发动' + ht.type, ht.desc || '动而有损'); score--; }
+            if (ht && ht.type === '化进神') { add('观动静', '用神发动化进', '动而化进神，其力倍增'); score += 2; }
+            else if (ht && ht.type === '回头生') { add('观动静', '用神发动回头生', '变爻生用神，动而有力'); score += 2; }
+            else if (ht && (ht.type === '化退神' || ht.type === '回头克' || ht.type === '化墓' || ht.type === '化绝' || ht.type === '化破')) { add('观动静', '用神发动' + ht.type, ht.desc || '动而有损'); score -= 2; }
             else if (ht && ht.type === '化空') { add('观动静', '用神发动化空', '动而化空，待出空方可应'); }
             else { add('观动静', '用神发动', '动爻为事之机，随其生克而应'); }
         } else if (!(guaXiang.duFa === '独发' && yongShen.primaryIndex === guaXiang.duFaYaoIndex)) {
@@ -1358,7 +1360,7 @@ function suanDuanGua(guaInfo) {
     } else if (guaXiang.duFa !== '独发') {
         add('观动静', '六爻安静', '事态未动，宜静观其变');
     }
-    if (yongYao && yongYao.dongSan) { add('观动静', '用神动散', '动而被日冲散，事如风吹火灭'); score--; }
+    if (yongYao && yongYao.dongSan) { add('观动静', '用神动散', '动而被日冲散，事如风吹火灭'); score -= 2; }
 
     // 步4 审世应
     const shiIdx = guaInfo.shiYaoIndex;
@@ -1446,7 +1448,7 @@ function suanDuanGua(guaInfo) {
 }
 
 // ============================================================
-// 十、R4 门类知识库（12 门类，以《增删卜易》为纲）
+// 十、R4 门类知识库（13 门类，以《增删卜易》为纲：婚姻/学业/功名/求财/疾病/出行/行人归期/诉讼/失物/子嗣胎孕/家宅迁移/终身财福/趋避防灾）
 // ============================================================
 const MENLEI_ZHISHI = {
     '婚姻': {
@@ -1550,7 +1552,7 @@ const MENLEI_KEYWORDS = [
 ];
 
 /**
- * R4-1 门类推断：问辞 → 12 门类之一（收敛旧 inferQuestionType 的关键词判定）
+ * R4-1 门类推断：问辞 → 13 门类之一（收敛旧 inferQuestionType 的关键词判定）
  * @param {string} question - 用户所问之事
  * @returns {string|null} 门类名；未命中返回 null
  */
@@ -1619,7 +1621,8 @@ const ANLI = [
         gua: '风天小畜', yue: '未', ri: '庚子', dong: [],
         source: '两现章',
         duan: '应临月建之财以克世，许之必得。彼问何日到手？余以次日辛丑冲动未土必得，后却得于辰土出空之日，此乃舍其不空而用旬空也。',
-        yongShen: '妻财', yongShenIndex: 3
+        yongShen: '妻财', yongShenIndex: 4, yingqiIndex: 3,
+        note: '取用=应爻未土（不空临月建，与算法"舍空取实"一致）；应期应验于辰土出空之日（3爻），"舍其不空而用旬空"乃应期法度，非取用分歧'
     },
     {
         gua: '地水师', yue: '未', ri: '甲午', dong: ['寅木', '午火'],
@@ -1628,7 +1631,7 @@ const ANLI = [
         yongShen: '官鬼', yongShenIndex: 2
     },
     {
-        gua: '兑为天', yue: '亥', ri: '己丑', dong: ['巳火'],
+        gua: '兑为泽', yue: '亥', ri: '己丑', dong: ['巳火'],
         source: '月破章',
         duan: '官动而生世，世动化进神，显然有官之象。但官逢月破，世遇旬空；冲空则实不为空，而破者又无日辰动爻之生，占以日建亦生不起。命之再占，前卦官临月破，定于实破之年，果于巳年承袭长房世职。',
         yongShen: '官鬼', yongShenIndex: 1
@@ -1646,7 +1649,7 @@ const ANLI = [
         yongShen: '妻财', yongShenIndex: 2
     },
     {
-        gua: '风地观', yue: '寅', ri: '辛卯', dong: ['父母'],
+        gua: '风地观', yue: '寅', ri: '辛卯', dong: ['未土'],
         source: '旬空章',
         duan: '父遇真空，日月伤克，虽则动不为空，疑其伤之太重，命之再占。得履之中孚，又是父动逢空，幸得日月生父，许甲午乙未日必到，果于未日返舍。神无二理，前卦未父持世目下旬空，出空而见父也。',
         yongShen: '父母', yongShenIndex: 4
@@ -1655,13 +1658,13 @@ const ANLI = [
         gua: '火天大有', yue: '辰', ri: '甲午', dong: ['寅木'],
         source: '独发章',
         duan: '父爻持世，被寅木一爻独发克制，乃身不能动，父灵亦不能动也。欲身动而见父灵，必待冲开寅木之年月。迟旬余再请一卦合而决之，前卦应冲开寅木者申也，后果应申年请准、酉年迎灵而归。此两卦俱是独发，岂可执独发而断？',
-        yongShen: '父母', yongShenIndex: 4
+        yongShen: '父母', yongShenIndex: 3
     },
     {
         gua: '天火同人', yue: '午', ri: '甲申', dong: ['戌土'],
         source: '独发章',
         duan: '戌土子孙一爻独发，友人谓昨日丙戌定应大晴，如何犹雨？余曰：尔忧麦被水冲，神以子孙发动克去身边之鬼，令尔勿忧，非应晴也；决不至于涨水，阴晴亦在卯日方大晴（动而逢合之日）。果于卯日大晴。',
-        yongShen: '子孙', yongShenIndex: 1
+        yongShen: '子孙', yongShenIndex: 6
     }
 ];
 

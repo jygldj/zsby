@@ -138,6 +138,73 @@ const g3 = { yaoDetail: [
 xuanYongShen(g3, '财运');
 assert(g3.yongShen.primaryIndex === 2, '边界 一空一破：舍破取全，取空而不破之辰爻(实际' + g3.yongShen.primaryIndex + '爻)');
 
+// ---- 评测报告2修正：ANLI 全库自洽性断言 ----
+// 1) 卦名必须存在于 64 卦；2) 取用爻位六亲自洽；3) 动爻必须为"地支+五行"格式（如'未土'），不得写六亲名
+function liuqinAt(guaName, idx) {
+    const gu = ALL_GUA_DATA.find(x => x.卦名 === guaName);
+    if (!gu) return null;
+    const w = gu.爻位[idx - 1];
+    if (!w) return null;
+    const wx = DIZHI_WUXING[w.地支];
+    if (wx === gu.五行) return '兄弟';
+    if (WX_SHENG_RW7[gu.五行] === wx) return '子孙';
+    if (WX_SHENG_RW7[wx] === gu.五行) return '父母';
+    if (WX_KE_RW7[gu.五行] === wx) return '妻财';
+    if (WX_KE_RW7[wx] === gu.五行) return '官鬼';
+    return null;
+}
+ANLI.forEach((a, i) => {
+    assert(!!ALL_GUA_DATA.find(x => x.卦名 === a.gua), 'ANLI[' + i + '] 卦名存在: ' + a.gua);
+    const actualLq = liuqinAt(a.gua, a.yongShenIndex);
+    assert(actualLq === a.yongShen, 'ANLI[' + i + '] ' + a.gua + ' 取用爻六亲自洽(' + a.yongShen + '@' + a.yongShenIndex + '爻, 实际' + actualLq + ')');
+    assert((a.dong || []).every(d => /^[子丑寅卯辰巳午未申酉戌亥][金木水火土]$/.test(d)), 'ANLI[' + i + '] ' + a.gua + ' 动爻为地支+五行格式');
+});
+// 小畜案例字段语义：取用=4(应爻未土) / 应期=3(辰土出空)，与算法"舍空取实"一致
+const anliXS = ANLI.find(a => a.gua === '风天小畜');
+assert(anliXS && anliXS.yongShenIndex === 4 && anliXS.yingqiIndex === 3, 'ANLI 小畜拆分 yongShenIndex=4 / yingqiIndex=3');
+// 兑为泽（月破章）卦名修正后仍可命中
+assert(findAnli('兑为泽', '己丑', '亥') !== null && findAnli('兑为天', '己丑', '亥') === null, 'ANLI 兑为泽 卦名修正后命中正常');
+
+// 评测建议 P1-4：两现皆空 → 仍须有取用（⑥舍其休囚用其旺相兜底）
+const g4 = { yaoDetail: [
+    { dizhi: '辰', liuqin: '妻财', isDong: false, yuePo: false, kongType: '真空' },
+    { dizhi: '未', liuqin: '妻财', isDong: false, yuePo: false, kongType: '真空' },
+    { dizhi: '午', liuqin: '官鬼', isDong: false, yuePo: false, kongType: 'none' },
+    { dizhi: '申', liuqin: '兄弟', isDong: false, yuePo: false, kongType: 'none' },
+    { dizhi: '戌', liuqin: '父母', isDong: false, yuePo: false, kongType: 'none' },
+    { dizhi: '子', liuqin: '子孙', isDong: false, yuePo: false, kongType: 'none' }
+], shiYaoIndex: 3, yingYaoIndex: 6, fuShenList: [], timeInfo: { yueJian: '未', riChen: '庚子', xunKong: '辰巳' }, userInfo: { gender: '男' } };
+xuanYongShen(g4, '财运');
+assert(g4.yongShen.primaryIndex != null, '边界 两现皆空：仍取旺相者为用(实际' + g4.yongShen.primaryIndex + '爻, ' + g4.yongShen.reason + ')');
+
+// ---- P1 权重增强（用神为尊）：一等 ±2 行为断言 ----
+// 断言A：用神月破（1爻卯木妻财，酉月金克木休囚，再月破 -2）→ 评分 ≤ -2
+const gw1 = { yaoDetail: [
+    { dizhi: '卯', liuqin: '妻财', isDong: false, yuePo: true, kongType: 'none', tianGan: '乙' },
+    { dizhi: '子', liuqin: '子孙', isDong: false, yuePo: false, kongType: 'none', tianGan: '甲' },
+    { dizhi: '寅', liuqin: '兄弟', isDong: false, yuePo: false, kongType: 'none', tianGan: '丙' },
+    { dizhi: '午', liuqin: '官鬼', isDong: false, yuePo: false, kongType: 'none', tianGan: '戊' },
+    { dizhi: '辰', liuqin: '父母', isDong: false, yuePo: false, kongType: 'none', tianGan: '庚' },
+    { dizhi: '申', liuqin: '兄弟', isDong: false, yuePo: false, kongType: 'none', tianGan: '壬' }
+], bianYao: [], guaXiang: {}, shiYaoIndex: 3, yingYaoIndex: 6, fuShenList: [],
+    timeInfo: { yueJian: '酉', riChen: '甲子', xunKong: '寅卯', nianGanZhi: '丙午' }, userInfo: { gender: '男' } };
+gw1.yongShen = { liuqin: '妻财', positions: [1], primaryIndex: 1, dizhi: '卯', reason: '测试' };
+suanDuanGua(gw1);
+assert(gw1.duanGua.score <= -2, 'P1加权 用神月破单条-2生效(实际评分' + gw1.duanGua.score + ')');
+// 断言B：用神得月比和旺相（3爻辰土妻财，未月比和）→ 评分 ≥ +2
+const gw2 = { yaoDetail: [
+    { dizhi: '子', liuqin: '父母', isDong: false, yuePo: false, kongType: 'none', tianGan: '甲' },
+    { dizhi: '寅', liuqin: '兄弟', isDong: false, yuePo: false, kongType: 'none', tianGan: '丙' },
+    { dizhi: '辰', liuqin: '妻财', isDong: false, yuePo: false, kongType: 'none', tianGan: '戊' },
+    { dizhi: '午', liuqin: '官鬼', isDong: false, yuePo: false, kongType: 'none', tianGan: '庚' },
+    { dizhi: '申', liuqin: '子孙', isDong: false, yuePo: false, kongType: 'none', tianGan: '壬' },
+    { dizhi: '戌', liuqin: '兄弟', isDong: false, yuePo: false, kongType: 'none', tianGan: '甲' }
+], bianYao: [], guaXiang: {}, shiYaoIndex: 3, yingYaoIndex: 5, fuShenList: [],
+    timeInfo: { yueJian: '未', riChen: '庚子', xunKong: '', nianGanZhi: '丙午' }, userInfo: { gender: '男' } };
+gw2.yongShen = { liuqin: '妻财', positions: [3], primaryIndex: 3, dizhi: '辰', reason: '测试' };
+suanDuanGua(gw2);
+assert(gw2.duanGua.score >= 2, 'P1加权 用神旺相+2生效(实际评分' + gw2.duanGua.score + ')');
+
 console.log(fail ? ('回归失败 ' + fail + ' 项') : '回归全部通过');
 process.exit(fail ? 1 : 0);
 `;
