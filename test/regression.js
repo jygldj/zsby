@@ -107,6 +107,37 @@ assert(g.yingqi === null || (g.yingqi.items && g.yingqi.items.length > 0), '冒�
     assert(out.indexOf('<script') === -1 && out.indexOf('<img') === -1 && out.indexOf('<svg') === -1 && out.indexOf('<a') === -1,
         'XSS 加固 mdToHtml 转义恶意标签: ' + s);
 });
+
+// ---- 短八 回归边界：动散 / 动不为空 / 一空一破 ----
+// 边界1 动散：动爻逢日支冲为散（如风吹火灭），静爻逢冲不在此判
+const g1 = { yaoDetail: [
+    { dizhi: '卯', liuqin: '妻财', isDong: true },
+    { dizhi: '子', liuqin: '子孙', isDong: false }
+], timeInfo: { riChen: '丁酉' } };
+suanDongSan(g1);
+assert(g1.yaoDetail[0].dongSan === true, '边界 动散：动爻卯逢酉日冲为散');
+assert(g1.yaoDetail[1].dongSan === false, '边界 非动不散：静爻逢冲不判散');
+
+// 边界2 动不为空：动爻旬空（无月破、月不克）不为真空，出空有期为假空
+const g2 = { yaoDetail: [
+    { dizhi: '子', liuqin: '兄弟', isDong: true, yuePo: false },
+    { dizhi: '午', liuqin: '官鬼', isDong: false }
+], timeInfo: { yueJian: '寅', riChen: '甲寅', xunKong: '子丑' } };
+jiSuanZhenKongJiaKong(g2);
+assert(g2.yaoDetail[0].kongType === '假空', '边界 动不为空：动爻旬空出空有期为假空(实际' + g2.yaoDetail[0].kongType + ')');
+
+// 边界3 一空一破：妻财两现，一爻真空一爻月破，无"全"者 → ③舍破取全，取"空而不破"者
+const g3 = { yaoDetail: [
+    { dizhi: '寅', liuqin: '妻财', isDong: false, yuePo: true, kongType: 'none' },
+    { dizhi: '辰', liuqin: '妻财', isDong: false, yuePo: false, kongType: '真空' },
+    { dizhi: '午', liuqin: '官鬼', isDong: false, yuePo: false, kongType: 'none' },
+    { dizhi: '申', liuqin: '兄弟', isDong: false, yuePo: false, kongType: 'none' },
+    { dizhi: '戌', liuqin: '父母', isDong: false, yuePo: false, kongType: 'none' },
+    { dizhi: '子', liuqin: '子孙', isDong: false, yuePo: false, kongType: 'none' }
+], shiYaoIndex: 3, yingYaoIndex: 6, fuShenList: [], timeInfo: { yueJian: '卯', riChen: '丁酉' }, userInfo: { gender: '男' } };
+xuanYongShen(g3, '财运');
+assert(g3.yongShen.primaryIndex === 2, '边界 一空一破：舍破取全，取空而不破之辰爻(实际' + g3.yongShen.primaryIndex + '爻)');
+
 console.log(fail ? ('回归失败 ' + fail + ' 项') : '回归全部通过');
 process.exit(fail ? 1 : 0);
 `;

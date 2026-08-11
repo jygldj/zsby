@@ -748,11 +748,11 @@
             const lunarDay = lunar.getDayInChinese();
             const lunarTime = `${lunarYear}年 ${lunarMonth}月${lunarDay}`;
             
-            // 月建（月支）- 直接从 lunar 获取
-            const yueJian = lunar.getMonthZhi() || '未知';
+            // 月建（月支）- 精确版：按时分比较节气，交节日前后不提前换月
+            const yueJian = lunar.getMonthZhiExact() || '未知';
             
-            // 日辰（日干支）- 直接从 lunar 获取
-            const riChen = lunar.getDayInGanZhi() || '未知';
+            // 日辰（日干支）- 晚子时换日版：23:00 后即起次日日柱（精确到秒，野鹤"神仙难断子时卦"由此而解）
+            const riChen = lunar.getDayInGanZhiExact() || '未知';
             
             // 时辰（时支）- 直接从 lunar 获取（仅展示，六爻传统以月建日辰定旺衰，时辰不入吉凶判定）
             const shiChen = lunar.getTimeZhi() || '未知';

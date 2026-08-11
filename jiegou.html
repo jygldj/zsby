@@ -207,8 +207,8 @@
                     var h2 = now2.getHours();
                     var si2 = (h2 >= 23 || h2 < 1) ? 0 : Math.floor(h2 / 2);
                     ti = {
-                        yueJian: lunar2.getMonthZhi(),
-                        riChen: lunar2.getDayInGanZhi(),
+                        yueJian: lunar2.getMonthZhiExact(),
+                        riChen: lunar2.getDayInGanZhiExact(),
                         xunKong: lunar2.getDayXunKong()
                     };
                 } catch (e3) { ti = { yueJian: '', riChen: '', xunKong: '' }; }

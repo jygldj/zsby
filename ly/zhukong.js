@@ -260,9 +260,10 @@
             if (isManual && selDayEl && selDayEl.value) {
                 dayGan = selDayEl.value.charAt(0);
             } else {
+                // 实时起卦：晚子时（23:00 后）起次日日柱，精确到秒（fromDate 保真时分）
                 const now = new Date();
-                dayGan = Solar.fromYmd(now.getFullYear(), now.getMonth() + 1, now.getDate())
-                    .getLunar().getDayInGanZhi().charAt(0);
+                dayGan = Solar.fromDate(now)
+                    .getLunar().getDayInGanZhiExact().charAt(0);
             }
         } catch(e) {
             console.warn('取日干失败，使用默认值甲:', e);

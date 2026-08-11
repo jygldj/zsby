@@ -523,7 +523,7 @@
         </div>
     </div>
 
-    <div class="footer-note">📜 月建遵节气 · 时辰用真太阳时 · 子时（23-24）日柱归本日 · 仅供研究参考</div>
+    <div class="footer-note">📜 月建遵节气（按时分） · 时辰用真太阳时 · 子时（23-24）起次日日柱 · 仅供研究参考</div>
     <!-- 遮罩层（保留在 .container 内，与 .mobile-sheet 坐标系一致，维持已验证表现） -->
     <div class="sheet-backdrop" id="sheetBackdrop"></div>
 </div>
@@ -1489,12 +1489,13 @@
         var zt = trueSolarTime(y,m,d,h,mi,lng);
 
         var dayLunar = lunarOf(y,m,d);
-        var dayGZ = dayLunar.getDayInGanZhi();
         var timeSolar = Solar.fromYmdHms(y,m,d, zt.h, zt.mi, zt.s);
         var timeLunar = timeSolar.getLunar();
+        // 起卦时刻口径统一：晚子时（23:00 后）起次日日柱，与月建（按时分）同刻
+        var dayGZ = timeLunar.getDayInGanZhiExact();
         var yearGZ = timeLunar.getYearInGanZhiExact();
         var monthZhi = timeLunar.getMonthZhiExact();
-        var xunKong = dayLunar.getDayXunKong();
+        var xunKong = timeLunar.getDayXunKong();
         var zhiIdx = Math.floor(((zt.h+1)%24)/2);
         var shiChen = ZHI[zhiIdx];
 
