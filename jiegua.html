@@ -681,6 +681,7 @@
         <span><span class="label">📅 农历：</span><span id="displayLunarTime">—</span></span>
         <span><span class="label">🌙 月建：</span><span id="displayYueJian">—</span></span>
         <span><span class="label">☀️ 日辰：</span><span id="displayRiChen">—</span></span>
+        <span><span class="label">⏰ 时辰：</span><span id="displayShiChen">—</span></span>
         <span><span class="label">🌀 旬空：</span><span id="displayXunKong">—</span></span>
     </div>
 
@@ -753,6 +754,9 @@
             // 日辰（日干支）- 直接从 lunar 获取
             const riChen = lunar.getDayInGanZhi() || '未知';
             
+            // 时辰（时支）- 直接从 lunar 获取（仅展示，六爻传统以月建日辰定旺衰，时辰不入吉凶判定）
+            const shiChen = lunar.getTimeZhi() || '未知';
+
             // 旬空 - 直接从 lunar 库获取（库内置算法基于天干地支索引差，正确可靠）
             const xunKong = lunar.getDayXunKong() || '—';
 
@@ -767,6 +771,7 @@
                 lunarTime: lunarTime,
                 yueJian: yueJian,
                 riChen: riChen,
+                shiChen: shiChen,
                 xunKong: xunKong,
                 nianGanZhi: nianGanZhi
             };
@@ -891,6 +896,7 @@
                 document.getElementById('displayLunarTime').textContent = '—';
                 document.getElementById('displayYueJian').textContent = '—';
                 document.getElementById('displayRiChen').textContent = '—';
+                document.getElementById('displayShiChen').textContent = '—';
                 document.getElementById('displayXunKong').textContent = '—';
                 return;
             }
@@ -901,14 +907,16 @@
             const dongList = guaData.dongYao.map(d => `${d}爻`).join('、');
             document.getElementById('dongYaoInfo').textContent = dongList || '无动爻（静卦）';
 
-            // 获取并显示当前时间信息
+            // 获取并显示起卦时间信息：优先采用手动输卦带过来的 timeInfo（复盘真实时辰），否则回退实时
             try {
-                const timeInfo = getTimeInfo();
-                document.getElementById('displaySolarTime').textContent = timeInfo.solarTime;
-                document.getElementById('displayLunarTime').textContent = timeInfo.lunarTime;
-                document.getElementById('displayYueJian').textContent = timeInfo.yueJian + '月';
-                document.getElementById('displayRiChen').textContent = timeInfo.riChen + '日';
-                document.getElementById('displayXunKong').textContent = timeInfo.xunKong;
+                const manual = (guaData && guaData.timeInfo && guaData.timeInfo.riChen) ? guaData.timeInfo : null;
+                const timeInfo = manual || getTimeInfo();
+                document.getElementById('displaySolarTime').textContent = timeInfo.solarTime || '—';
+                document.getElementById('displayLunarTime').textContent = timeInfo.lunarTime || '—';
+                document.getElementById('displayYueJian').textContent = (timeInfo.yueJian || '未知') + '月';
+                document.getElementById('displayRiChen').textContent = (timeInfo.riChen || '未知') + '日';
+                document.getElementById('displayShiChen').textContent = (timeInfo.shiChen || '未知') + '时';
+                document.getElementById('displayXunKong').textContent = timeInfo.xunKong || '—';
             } catch(e) {
                 console.warn('获取时间信息失败:', e);
             }
@@ -1353,7 +1361,7 @@
                 }
 
                 // 显示结果
-                // 构建简洁干支年月日（去掉"手动输入"/时辰/"（公历）""（农历）"等冗余信息）
+                // 构建简洁干支年月日（去掉"手动输入"/"（公历）""（农历）"等冗余信息）
                 let timeText = '';
                 const rawLunar = (timeInfo.lunarTime || '').replace(/（农历）$/, '').trim();
                 if (/^[\u4e00-\u9fa5]/.test(rawLunar) && rawLunar.includes('年')) {
@@ -1362,6 +1370,10 @@
                 } else {
                     // 其他格式（如数字年）：fallback 到 月建+日辰
                     timeText = `${timeInfo.yueJian || ''}月 ${timeInfo.riChen || ''}日`.replace(/\s+/, ' ').trim();
+                }
+                // 补时辰：手动/实时 timeInfo 均带 shiChen 时，末尾追加"X时"（若已含则跳过）
+                if (timeInfo.shiChen && timeText.indexOf('时') === -1) {
+                    timeText = (timeText + ' ' + timeInfo.shiChen + '时').replace(/\s+/, ' ').trim();
                 }
                 const userText = escapeHtml(`姓名：${userInfo.name || '匿名'}　性别：${userInfo.gender || '未知'}　出生时辰：${userInfo.birth || '未知'}`);
                 const questionText = escapeHtml(userInfo.question || '未提供具体问题，请综合解读');
@@ -1426,7 +1438,7 @@
                                 <span>📅 起卦：${timeText}</span>
                             </div>
                             <div class="user-row">
-                                <span>🌙 月建：${timeInfo.yueJian || '未知'}月　☀️ 日辰：${timeInfo.riChen || '未知'}日　🌀 旬空：${timeInfo.xunKong || '—'}</span>
+                                <span>🌙 月建：${timeInfo.yueJian || '未知'}月　☀️ 日辰：${timeInfo.riChen || '未知'}日　⏰ 时辰：${timeInfo.shiChen || '未知'}时　🌀 旬空：${timeInfo.xunKong || '—'}</span>
                             </div>
                             <div class="user-row">
                                 <span>❓ 所问：${questionText}</span>
@@ -1483,7 +1495,7 @@
                 window.__guaResultText = `【卦象解读 · ${guaData.benGuaName} → ${guaData.bianGuaName}】
 求卦者：${userText}
 起卦时间：${timeText}
-月建：${timeInfo.yueJian || '未知'}月　日辰：${timeInfo.riChen || '未知'}日　旬空：${timeInfo.xunKong || '—'}
+月建：${timeInfo.yueJian || '未知'}月　日辰：${timeInfo.riChen || '未知'}日　时辰：${timeInfo.shiChen || '未知'}时　旬空：${timeInfo.xunKong || '—'}
 所问之事：${questionText}
 
 ${cleanResult}
