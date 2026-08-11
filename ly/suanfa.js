@@ -1239,7 +1239,49 @@ function tuiYingQi(guaInfo, startDate) {
             }
         }
 
-        guaInfo.yingqi = items.length ? { items: items, primaryType: items[0].type } : null;
+        // 7. 就近排序 + 裁决 + 冲突标注（P0-3：最近优先排序 + 冲突标注）
+        // 摊平所有类型的候选日为统一池，按公历日升序 → 最近优先
+        const sortedCands = [];
+        items.forEach(it => {
+            (it.candidates || []).forEach(c => {
+                sortedCands.push({ type: it.type, yiJu: it.yiJu, solar: c.solar, riChen: c.riChen, monthZhi: c.monthZhi });
+            });
+        });
+        sortedCands.sort((a, b) => (a.solar < b.solar ? -1 : (a.solar > b.solar ? 1 : 0)));
+        const solarCnt = {};
+        sortedCands.forEach(s => { solarCnt[s.solar] = (solarCnt[s.solar] || 0) + 1; });
+        sortedCands.forEach(s => { s.multi = solarCnt[s.solar] > 1; }); // 同日记多象 → 多法并应
+        const primaryDate = sortedCands.length ? sortedCands[0].solar : null;
+        const primaryRiChen = sortedCands.length ? sortedCands[0].riChen : null;
+        const primaryTypeFinal = sortedCands.length ? sortedCands[0].type : (items.length ? items[0].type : null);
+
+        // 冲突/印证标注：只标注「现象」，不臆断吉凶（旺相应近、休囚应远交由人工/AI察旺衰）
+        const agreement = sortedCands.some(s => s.multi); // 多法并应：不同法则同指一日，事象确凿
+        const NEAR_SET = ['出空', '冲空实空', '临值', '冲合', '独发临值'];   // 通常近应
+        const FAR_SET = ['出月实破', '出墓', '独发临月建'];                    // 通常远应
+        const nearFirst = sortedCands.find(s => NEAR_SET.indexOf(s.type) !== -1);
+        const farFirst = sortedCands.find(s => FAR_SET.indexOf(s.type) !== -1);
+        let divergent = false; // 远近两应：近象与远象并存，跨度大 → 须察旺衰定夺
+        if (nearFirst && farFirst) {
+            const dd = Math.abs((new Date(farFirst.solar) - new Date(nearFirst.solar)) / 86400000);
+            if (dd > 40) divergent = true;
+        }
+        const unstable = !!(guaXiang && guaXiang.fanYin); // 反吟 → 事多反复，应期或迁延不定
+        let weak = false; // 用神真空兼月破 → 应期当远，出月出旬方应
+        if (yongShen && typeof yongShen.primaryIndex === 'number') {
+            const ysYao = yaoDetail[yongShen.primaryIndex];
+            if (ysYao && ysYao.kongType === '真空' && ysYao.yuePo) weak = true;
+        }
+        const flags = { agreement: agreement, divergent: divergent, unstable: unstable, weak: weak };
+        const flagNotes = [];
+        if (agreement) flagNotes.push('多法并应：不同应期法则同指一日，事象确凿');
+        if (divergent) flagNotes.push('远近两应：近象与远象并存，须察用神旺衰定夺（旺相应近、休囚应远）');
+        if (unstable) flagNotes.push('卦反吟：事多反复，应期或迁延不定');
+        if (weak) flagNotes.push('用神真空兼月破：应期当远，出月出旬方应');
+
+        guaInfo.yingqi = items.length
+            ? { items: items, primaryType: primaryTypeFinal, primaryDate: primaryDate, primaryRiChen: primaryRiChen, sortedCandidates: sortedCands, flags: flags, flagsNote: flagNotes.join('；') }
+            : null;
     } catch(e) {
         console.warn('应期引擎失败:', e);
         guaInfo.yingqi = null;

@@ -93,7 +93,9 @@ async function callQwen(guaInfo, modelKey) {
         : '未计算';
     const yq = guaInfo.yingqi;
     const yingqiText = yq && yq.items && yq.items.length
-        ? yq.items.map(it => `${it.type}：${it.yiJu || ''} → ${(it.candidates || []).map(c => c.solar).join('、') || '暂无候选'}`).join('\n')
+        ? (yq.primaryDate ? `首选应期（最近优先）：${yq.primaryDate}（${yq.primaryRiChen || ''}，${yq.primaryType || ''}）\n` : '')
+          + (yq.flagsNote ? `应期标注：${yq.flagsNote}\n` : '')
+          + yq.items.map(it => `${it.type}：${it.yiJu || ''} → ${(it.candidates || []).map(c => c.solar).join('、') || '暂无候选'}`).join('\n')
         : '未计算';
 
     const mc = guaInfo.menleiContext;

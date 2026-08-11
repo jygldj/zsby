@@ -504,6 +504,19 @@ try {
 
     // 确认手动输卦排盘
     function confirmInput() {
+        // 强制必填：手动输卦复盘须提供原始起卦时辰，禁用当前时间兜底（道玄原则：复盘数据必须真实）
+        const modeInputBtn = document.getElementById('modeInputBtn');
+        const isManual = modeInputBtn && modeInputBtn.classList.contains('active');
+        if (isManual) {
+            const y = (document.getElementById('selYear') || {}).value;
+            const m = (document.getElementById('selMonth') || {}).value;
+            const d = (document.getElementById('selDay') || {}).value;
+            const h = (document.getElementById('selHour') || {}).value;
+            if (!y || !m || !d || !h) {
+                alert('复盘须提供原始起卦时辰：请在「起卦时间」处选择年/月/日/时（干支），四项齐全方可排盘。若以当前时间冒充，月破、旬空、旺衰、应期全会失真，复盘失去意义。');
+                return;
+            }
+        }
         yaoResults = [];
         dongStatus = [];
         for (let i = 1; i <= 6; i++) {

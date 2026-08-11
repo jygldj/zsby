@@ -114,20 +114,6 @@
         return a;
     }
 
-    // 当前真太阳时（与 wnl.html 同口径：lunar.js 取年月日干支 + 时辰分支）
-    function getNowTimeInfo() {
-        const now = new Date();
-        let lunar = null;
-        try { lunar = Solar.fromDate(now).getLunar(); } catch (e) { lunar = null; }
-        const nianGanZhi = lunar ? lunar.getYearInGanZhi() : '';
-        const yueJian = lunar ? lunar.getMonthZhi() : '';
-        const riChen = lunar ? lunar.getDayInGanZhi() : '';
-        const h = now.getHours();
-        const shiIdx = (h >= 23 || h < 1) ? 0 : Math.floor(h / 2);
-        const shiChen = ZHI[shiIdx];
-        return { nianGanZhi: nianGanZhi, yueJian: yueJian, riChen: riChen, shiChen: shiChen };
-    }
-
     // 由日干支推旬空（统一走 lunar.js LunarUtil.getXunKong，与 wnl.html 同源）
     function xunKongOf(riChen) {
         if (!riChen || riChen.length < 2) return '';
@@ -151,16 +137,16 @@
     }
 
     function fillSelect(sel, arr, selected) {
-        sel.innerHTML = '<option value="">（留空=自动）</option>' +
+        sel.innerHTML = '<option value="">（请选择起卦时辰）</option>' +
             arr.map(v => '<option value="' + v + '"' + (v === selected ? ' selected' : '') + '>' + v + '</option>').join('');
     }
 
     function initTimeSelectors() {
-        const now = getNowTimeInfo();
-        fillSelect(selYear, jiaZi60(), now.nianGanZhi);
-        fillSelect(selMonth, YUE_ZHI, now.yueJian);
-        fillSelect(selDay, jiaZi60(), now.riChen);
-        fillSelect(selHour, ZHI, now.shiChen);
+        // 复盘须用原始起卦时辰，严禁预填当前真太阳时——四项默认空，由用户主动填入真实干支
+        fillSelect(selYear, jiaZi60(), '');
+        fillSelect(selMonth, YUE_ZHI, '');
+        fillSelect(selDay, jiaZi60(), '');
+        fillSelect(selHour, ZHI, '');
     }
 
     // 排盘后回写：仅手动模式 + 六爻已填，才把 timeInfo 写入 currentGua
@@ -177,11 +163,8 @@
         if (!allYao) return; // 排盘未成功，不注入
 
         let y = selYear.value, m = selMonth.value, d = selDay.value, h = selHour.value;
-        if (!y || !m || !d || !h) {
-            const now = getNowTimeInfo();
-            y = y || now.nianGanZhi; m = m || now.yueJian;
-            d = d || now.riChen; h = h || now.shiChen;
-        }
+        // 复盘须用原始时辰，禁用当前时间兜底：四项缺失则不写入，交由排盘前置校验阻止
+        if (!y || !m || !d || !h) return;
         const ti = assembleTimeInfo(y, m, d, h);
         try {
             const raw = localStorage.getItem('currentGua');
@@ -195,6 +178,9 @@
     }
 
     if (selYear) initTimeSelectors();
+    // 重置时一并清空起卦时辰输入框（复盘须用原始数据，不设默认当前）
+    const resetBtnEl = document.getElementById('resetBtn');
+    if (resetBtnEl) resetBtnEl.addEventListener('click', initTimeSelectors);
     const completeBtn = document.getElementById('completeBtn');
     if (completeBtn) completeBtn.addEventListener('click', applyManualTimeInfo);
 

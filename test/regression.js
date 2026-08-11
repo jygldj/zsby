@@ -97,7 +97,7 @@ jiSuanYuePo(g); jiSuanRiPoAnDong(g); jiSuanZhenKongJiaKong(g);
 jiSuanYuanShenKongFu(g, g.menlei); jiSuanShiYaoZhuangTai(g);
 suanQuanBuGuaXiang(g); tuiYingQi(g, new Date(2026, 7, 10)); suanDuanGua(g);
 assert(g.menleiContext && g.menleiContext.menlei === '求财', '冒烟 门类知识库命中求财');
-assert(g.duanGua && g.duanGua.chain.length >= 8 && ['吉','中','凶'].indexOf(g.duanGua.jiXiong) !== -1, '冒烟 断卦链+吉凶判定');
+assert(g.duanGua && g.duanGua.chain.length >= 8 && ['大吉','吉','中','小凶','凶'].indexOf(g.duanGua.jiXiong) !== -1, '冒烟 断卦链+吉凶判定(五档)');
 assert(g.duanGua.chain.some(c => c.jueJu === '察门类'), '冒烟 断卦链含察门类步');
 assert(g.yingqi === null || (g.yingqi.items && g.yingqi.items.length > 0), '冒烟 应期引擎结构合法');
 
