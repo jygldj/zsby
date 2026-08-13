@@ -367,7 +367,8 @@ h1 {
     font-weight: bold;
     color: #5a4632;
 }
-/* 所问之事：下拉直选（与万年历·择吉助手·选择事项同风格） */
+/* 所问之事：下拉直选 / 可写框（与万年历·择吉助手·选择事项同风格；起卦页 + 释卦页共用） */
+.q-select,
 .field-group select.q-select {
     width: 100%;
     padding: 9px 12px;
@@ -388,17 +389,35 @@ h1 {
     background-size: 12px;
     transition: 0.2s;
 }
+.q-select:focus,
 .field-group select.q-select:focus {
     outline: none;
     border-color: #8a765d;
     box-shadow: 0 0 0 3px rgba(107, 79, 57, 0.15);
 }
+.q-select option[value=""],
 .field-group select.q-select option[value=""] {
     color: #b09a84;
 }
-.q-other-input {
-    margin-top: 6px;
-    display: block;
+/* 可写框：选「其他」后替代下拉，外观与 .q-select 同框（仅无下拉箭头），实现视觉合一 */
+.q-writable,
+.field-group input.q-writable {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid #cbb8a4;
+    background: #fcf8f0;
+    color: #3c2e22;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: 0.2s;
+}
+.q-writable:focus,
+.field-group input.q-writable:focus {
+    outline: none;
+    border-color: #8a765d;
+    box-shadow: 0 0 0 3px rgba(107, 79, 57, 0.15);
 }
 .nav-bar {
     display: flex;

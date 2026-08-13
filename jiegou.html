@@ -55,7 +55,7 @@
                     <option value="疾病">疾病</option>
                     <option value="__other__">其他</option>
                 </select>
-                <input type="text" id="userQuestion" class="q-other-input" placeholder="填写其他所问之事" style="display:none;">
+                <input type="text" id="userQuestion" class="q-writable" placeholder="填写其他所问之事" style="display:none;">
             </div>
         </div>
     </div>
@@ -397,44 +397,52 @@
 })();
 </script>
 <script>
-// ===== 所问之事下拉直选入口（与万年历·择吉助手·选择事项同风格）=====
-// 4 固化事项（求财/功名/婚姻/疾病）下拉直选、不输入；选「其他」展开输入框。
-// 值载体仍为 #userQuestion，zhukong.js 读取逻辑零改动；确保门类判定准确。
+// ===== 所问之事下拉↔可写框 视觉合一（与万年历·择吉助手·选择事项同风格）=====
+// 选「其他」后下拉原地替换为同款 .q-writable 可写框（同一位置只存在一个框）；
+// 4 固化事项（求财/功名/婚姻/疾病）下拉直选、不输入。
+// 值载体仍为 #userQuestion（亦作可写框），zhukong.js 读取逻辑零改动；门类判定准确。
 (function () {
     const sel = document.getElementById('questionSelect');
-    const qInput = document.getElementById('userQuestion');
+    const qInput = document.getElementById('userQuestion'); // 值载体 + 可写框
     if (!sel || !qInput) return;
     const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
 
-    // select 选择 → 联动值载体 #userQuestion
-    function syncFromSelect() {
+    // 显示下拉、隐藏可写框
+    function showSelect() { sel.style.display = ''; qInput.style.display = 'none'; }
+    // 显示可写框、隐藏下拉（视觉合一：同一位置只存在一个框）
+    function showInput() { sel.style.display = 'none'; qInput.style.display = 'block'; qInput.focus(); }
+
+    // 下拉选择 → 联动
+    sel.addEventListener('change', function () {
         const v = sel.value;
         if (v === '__other__') {
-            qInput.style.display = 'block';
-            if (MENLEI_4.indexOf(qInput.value) !== -1) qInput.value = '';
-            qInput.focus();
+            showInput();
+            if (MENLEI_4.indexOf(qInput.value.trim()) !== -1) qInput.value = ''; // 清空误带的固化词
         } else if (v) {
-            qInput.value = v;
-            qInput.style.display = 'none';
+            qInput.value = v; // 固化项写入值载体
+            showSelect();
         } else {
-            // 占位项「选择事项…」：清空并收起输入框
-            qInput.value = '';
-            qInput.style.display = 'none';
+            qInput.value = ''; // 占位项「选择事项…」
+            showSelect();
         }
-    }
-    sel.addEventListener('change', syncFromSelect);
-
-    // 用户在输入框直接打字 → 联动 select 指向「其他」
-    qInput.addEventListener('input', function () {
-        if (sel.value !== '__other__') sel.value = '__other__';
     });
 
-    // 初始化：若已有值（tstj 跳转 / 回退 / 复填），同步 select 状态
+    // 可写框打字 → 值载体即时更新；若恰好等于某固化词，逆向归位下拉（UI 与值一致）
+    qInput.addEventListener('input', function () {
+        const v = qInput.value.trim();
+        if (MENLEI_4.indexOf(v) !== -1) {
+            sel.value = v;
+            qInput.value = v;
+            showSelect();
+        }
+    });
+
+    // 初始化：若已有值（tstj 跳转 / 回退 / 复填），同步控件可见状态
     function initFromValue() {
-        const cur = qInput.value || '';
-        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; qInput.style.display = 'none'; }
-        else if (cur) { sel.value = '__other__'; qInput.style.display = 'block'; }
-        else { sel.value = ''; qInput.style.display = 'none'; }
+        const cur = (qInput.value || '').trim();
+        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; showSelect(); }
+        else if (cur) { sel.value = '__other__'; showInput(); }
+        else { sel.value = ''; showSelect(); }
     }
     initFromValue();
 })();

@@ -669,8 +669,16 @@
                 <input type="text" id="jgUserBirth" placeholder="如：癸卯年辛酉月癸酉日庚申时">
             </div>
             <div class="field-group fluid">
-                <label for="jgUserQuestion">所问之事</label>
-                <input type="text" id="jgUserQuestion" placeholder="所问之事">
+                <label for="jgQuestionSelect">所问之事</label>
+                <select id="jgQuestionSelect" class="q-select">
+                    <option value="">选择事项…</option>
+                    <option value="求财">求财</option>
+                    <option value="功名">功名</option>
+                    <option value="婚姻">婚姻</option>
+                    <option value="疾病">疾病</option>
+                    <option value="__other__">其他</option>
+                </select>
+                <input type="text" id="jgUserQuestion" class="q-writable" placeholder="填写其他所问之事" style="display:none;">
             </div>
         </div>
     </div>
@@ -1695,15 +1703,34 @@ ${cleanResult}
             if (!saved.name && !saved.question) {
                 try { saved = JSON.parse(sessionStorage.getItem('userInfo') || '{}'); } catch(e) {}
             }
-            const fields = {
-                jgUserName: saved.name || '',
-                jgUserGender: saved.gender || '男',
-                jgUserBirth: saved.birth || '',
-                jgUserQuestion: saved.question || ''
-            };
-            for (const [id, val] of Object.entries(fields)) {
-                const el = document.getElementById(id);
-                if (el) el.value = val;
+            const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+            setVal('jgUserName', saved.name);
+            setVal('jgUserGender', saved.gender || '男');
+            setVal('jgUserBirth', saved.birth);
+            setVal('jgUserQuestion', saved.question); // 值载体暂存，下方按门类同步显隐
+
+            // ⭐ 所问之事：下拉↔可写框 视觉合一（与起卦页同逻辑）
+            const selEl = document.getElementById('jgQuestionSelect');
+            const qEl = document.getElementById('jgUserQuestion');
+            if (selEl && qEl) {
+                const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
+                const showSelect = () => { selEl.style.display = ''; qEl.style.display = 'none'; };
+                const showInput = () => { selEl.style.display = 'none'; qEl.style.display = 'block'; qEl.focus(); };
+                selEl.addEventListener('change', () => {
+                    const v = selEl.value;
+                    if (v === '__other__') { showInput(); if (MENLEI_4.indexOf(qEl.value.trim()) !== -1) qEl.value = ''; }
+                    else if (v) { qEl.value = v; showSelect(); }
+                    else { qEl.value = ''; showSelect(); }
+                });
+                qEl.addEventListener('input', () => {
+                    const v = qEl.value.trim();
+                    if (MENLEI_4.indexOf(v) !== -1) { selEl.value = v; qEl.value = v; showSelect(); }
+                });
+                // 依据当前值初始化可见控件（固化词→下拉；其余→可写框）
+                const cur = (qEl.value || '').trim();
+                if (MENLEI_4.indexOf(cur) !== -1) { selEl.value = cur; showSelect(); }
+                else if (cur) { selEl.value = '__other__'; showInput(); }
+                else { selEl.value = ''; showSelect(); }
             }
         })();
 
