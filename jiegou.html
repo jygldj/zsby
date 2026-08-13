@@ -47,7 +47,14 @@
             </div>
             <div class="field-group fluid">
                 <label for="userQuestion">所问之事</label>
-                <input type="text" id="userQuestion" placeholder="所问之事">
+                <div class="question-quick" id="questionQuick">
+                    <button type="button" class="q-btn" data-menlei="求财">求财</button>
+                    <button type="button" class="q-btn" data-menlei="功名">功名</button>
+                    <button type="button" class="q-btn" data-menlei="婚姻">婚姻</button>
+                    <button type="button" class="q-btn" data-menlei="疾病">疾病</button>
+                    <button type="button" class="q-btn q-other" id="qOtherBtn">其他</button>
+                </div>
+                <input type="text" id="userQuestion" class="q-other-input" placeholder="填写其他所问之事" style="display:none;">
             </div>
         </div>
     </div>
@@ -386,6 +393,38 @@
     } else {
         setTimeout(receiveTstjTimeInfo, 200);
     }
+})();
+</script>
+<script>
+// ===== 所问之事四门直选入口（求财/功名/婚姻/疾病 + 其他可写）=====
+// 值载体仍为 #userQuestion，zhukong.js 读取逻辑零改动；四门直选确保门类判定准确。
+(function () {
+    const qQuick = document.getElementById('questionQuick');
+    const qInput = document.getElementById('userQuestion');
+    if (!qQuick || !qInput) return;
+    const btns = qQuick.querySelectorAll('.q-btn');
+    const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
+    function setActive(btn) {
+        btns.forEach(function (b) { b.classList.remove('active'); });
+        if (btn) btn.classList.add('active');
+    }
+    btns.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            if (this.id === 'qOtherBtn') {
+                setActive(this);
+                qInput.style.display = 'block';
+                if (MENLEI_4.indexOf(qInput.value) !== -1) qInput.value = '';
+                qInput.focus();
+            } else {
+                qInput.value = this.getAttribute('data-menlei');
+                qInput.style.display = 'none';
+                setActive(this);
+            }
+        });
+    });
+    qInput.addEventListener('input', function () {
+        setActive(document.getElementById('qOtherBtn'));
+    });
 })();
 </script>
 </body>

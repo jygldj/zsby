@@ -367,6 +367,43 @@ h1 {
     font-weight: bold;
     color: #5a4632;
 }
+/* 所问之事：四门直选 + 其他折叠 */
+.question-quick {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.q-btn {
+    padding: 7px 14px;
+    font-size: 14px;
+    font-family: inherit;
+    color: #5a4632;
+    background: rgba(255, 248, 240, 0.6);
+    border: 1px solid #d5c6b4;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: 0.15s;
+    letter-spacing: 1px;
+    white-space: nowrap;
+}
+.q-btn:hover {
+    border-color: #8a765d;
+}
+.q-btn.active {
+    background: #6b4f39;
+    color: #fff;
+    border-color: #6b4f39;
+    font-weight: bold;
+}
+.q-btn.q-other {
+    color: #7a6652;
+    border-style: dashed;
+}
+.q-other-input {
+    margin-top: 6px;
+    display: block;
+}
 .nav-bar {
     display: flex;
     justify-content: center;
