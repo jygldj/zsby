@@ -46,14 +46,15 @@
                 <input type="text" id="userBirth" placeholder="如：癸卯年辛酉月癸酉日庚申时">
             </div>
             <div class="field-group fluid">
-                <label for="userQuestion">所问之事</label>
-                <div class="question-quick" id="questionQuick">
-                    <button type="button" class="q-btn" data-menlei="求财">求财</button>
-                    <button type="button" class="q-btn" data-menlei="功名">功名</button>
-                    <button type="button" class="q-btn" data-menlei="婚姻">婚姻</button>
-                    <button type="button" class="q-btn" data-menlei="疾病">疾病</button>
-                    <button type="button" class="q-btn q-other" id="qOtherBtn">其他</button>
-                </div>
+                <label for="questionSelect">所问之事</label>
+                <select id="questionSelect" class="q-select">
+                    <option value="">选择事项…</option>
+                    <option value="求财">求财</option>
+                    <option value="功名">功名</option>
+                    <option value="婚姻">婚姻</option>
+                    <option value="疾病">疾病</option>
+                    <option value="__other__">其他</option>
+                </select>
                 <input type="text" id="userQuestion" class="q-other-input" placeholder="填写其他所问之事" style="display:none;">
             </div>
         </div>
@@ -396,35 +397,46 @@
 })();
 </script>
 <script>
-// ===== 所问之事四门直选入口（求财/功名/婚姻/疾病 + 其他可写）=====
-// 值载体仍为 #userQuestion，zhukong.js 读取逻辑零改动；四门直选确保门类判定准确。
+// ===== 所问之事下拉直选入口（与万年历·择吉助手·选择事项同风格）=====
+// 4 固化事项（求财/功名/婚姻/疾病）下拉直选、不输入；选「其他」展开输入框。
+// 值载体仍为 #userQuestion，zhukong.js 读取逻辑零改动；确保门类判定准确。
 (function () {
-    const qQuick = document.getElementById('questionQuick');
+    const sel = document.getElementById('questionSelect');
     const qInput = document.getElementById('userQuestion');
-    if (!qQuick || !qInput) return;
-    const btns = qQuick.querySelectorAll('.q-btn');
+    if (!sel || !qInput) return;
     const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
-    function setActive(btn) {
-        btns.forEach(function (b) { b.classList.remove('active'); });
-        if (btn) btn.classList.add('active');
+
+    // select 选择 → 联动值载体 #userQuestion
+    function syncFromSelect() {
+        const v = sel.value;
+        if (v === '__other__') {
+            qInput.style.display = 'block';
+            if (MENLEI_4.indexOf(qInput.value) !== -1) qInput.value = '';
+            qInput.focus();
+        } else if (v) {
+            qInput.value = v;
+            qInput.style.display = 'none';
+        } else {
+            // 占位项「选择事项…」：清空并收起输入框
+            qInput.value = '';
+            qInput.style.display = 'none';
+        }
     }
-    btns.forEach(function (btn) {
-        btn.addEventListener('click', function () {
-            if (this.id === 'qOtherBtn') {
-                setActive(this);
-                qInput.style.display = 'block';
-                if (MENLEI_4.indexOf(qInput.value) !== -1) qInput.value = '';
-                qInput.focus();
-            } else {
-                qInput.value = this.getAttribute('data-menlei');
-                qInput.style.display = 'none';
-                setActive(this);
-            }
-        });
-    });
+    sel.addEventListener('change', syncFromSelect);
+
+    // 用户在输入框直接打字 → 联动 select 指向「其他」
     qInput.addEventListener('input', function () {
-        setActive(document.getElementById('qOtherBtn'));
+        if (sel.value !== '__other__') sel.value = '__other__';
     });
+
+    // 初始化：若已有值（tstj 跳转 / 回退 / 复填），同步 select 状态
+    function initFromValue() {
+        const cur = qInput.value || '';
+        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; qInput.style.display = 'none'; }
+        else if (cur) { sel.value = '__other__'; qInput.style.display = 'block'; }
+        else { sel.value = ''; qInput.style.display = 'none'; }
+    }
+    initFromValue();
 })();
 </script>
 </body>

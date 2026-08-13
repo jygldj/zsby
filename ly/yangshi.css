@@ -367,38 +367,34 @@ h1 {
     font-weight: bold;
     color: #5a4632;
 }
-/* 所问之事：四门直选 + 其他折叠 */
-.question-quick {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-}
-.q-btn {
-    padding: 7px 14px;
-    font-size: 14px;
+/* 所问之事：下拉直选（与万年历·择吉助手·选择事项同风格） */
+.field-group select.q-select {
+    width: 100%;
+    padding: 9px 12px;
+    font-size: 16px;
+    border-radius: 10px;
+    border: 1px solid #cbb8a4;
+    background: #fcf8f0;
+    color: #3c2e22;
     font-family: inherit;
-    color: #5a4632;
-    background: rgba(255, 248, 240, 0.6);
-    border: 1px solid #d5c6b4;
-    border-radius: 20px;
     cursor: pointer;
-    transition: 0.15s;
-    letter-spacing: 1px;
-    white-space: nowrap;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    padding-right: 28px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M2 4l4 4 4-4' stroke='%236b4f39' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    transition: 0.2s;
 }
-.q-btn:hover {
+.field-group select.q-select:focus {
+    outline: none;
     border-color: #8a765d;
+    box-shadow: 0 0 0 3px rgba(107, 79, 57, 0.15);
 }
-.q-btn.active {
-    background: #6b4f39;
-    color: #fff;
-    border-color: #6b4f39;
-    font-weight: bold;
-}
-.q-btn.q-other {
-    color: #7a6652;
-    border-style: dashed;
+.field-group select.q-select option[value=""] {
+    color: #b09a84;
 }
 .q-other-input {
     margin-top: 6px;
