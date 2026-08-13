@@ -1433,6 +1433,10 @@ function suanDuanGua(guaInfo) {
             (mc.yingqi.length ? '　应期：' + mc.yingqi.join('、') : '') +
             (mc.chiShi ? '　持世：' + mc.chiShi : ''));
     }
+    // 步6.6 四门专属计分（策3）+ 去重护栏
+    const mlRes = applyMenLeiScoring(guaInfo, score);
+    mlRes.entries.forEach(e => chain.push(e));
+    score = mlRes.score;
 
     // 步7 综合结论（五档分级：大吉/吉/中/小凶/凶，警示适度不伤人）
     let jiXiong;
@@ -1530,6 +1534,148 @@ const MENLEI_ZHISHI = {
         chiShi: '子孙持世可解，官鬼持世防灾'
     }
 };
+
+// ============================================================
+// 策3 · 四门专属计分规则（MENLEI_RULES）+ 去重护栏
+// ============================================================
+// 去重三档：overlap='tongyuan'（与通用机制同源，只显式化语义、不重复计分）
+//           overlap='fugai'（非通用覆盖，门类特有语义，独立计分）
+//           overlap='bufen'（部分去重，仅计门类特有差额）
+// 疾病门第一批全部 score=0（吉凶方向反转牵动步2/步5，属第二批），仅显式化语义。
+const MENLEI_RULES = [
+    // ===== 求财门 =====
+    { id:'求财-1', menlei:'求财', desc:'兄弟爻动（劫财之神）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const j=g.jiShenState; return !!(j && j.liuqin==='兄弟' && j.positions && j.positions.length>0); },
+      reason:'兄弟即妻财忌神，与通用「忌神有力−1」同源→去重，不双计' },
+    { id:'求财-2', menlei:'求财', desc:'妻财旺相得生扶', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.liuqin==='妻财' && typeof y.primaryIndex==='number'); },
+      reason:'属用神旺相范畴→归位用神本体±2计分，去重' },
+    { id:'求财-3', menlei:'求财', desc:'财爻伏藏不现（难求）', direction:'凶', overlap:'fugai', score:-1,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.liuqin==='妻财' && typeof y.primaryIndex==='string' && y.primaryIndex.indexOf('伏')===0); },
+      reason:'非通用机制覆盖（伏神法度）→可独立计' },
+    { id:'求财-4', menlei:'求财', desc:'财爻克世/冲世（财来就我）', direction:'吉', overlap:'fugai', score:1,
+      check:(g)=>{
+        const y=g.yongShen, shiIdx=g.shiYaoIndex;
+        if (!y || !y.dizhi || shiIdx==null) return false;
+        const shi=(g.yaoDetail||[])[shiIdx-1];
+        if (!shi || !shi.dizhi) return false;
+        const yongWx=DIZHI_WUXING[y.dizhi]||'', shiWx=DIZHI_WUXING[shi.dizhi]||'';
+        return (yongWx && shiWx && WX_KE_RW7[yongWx]===shiWx) || isChongRW7(y.dizhi, shi.dizhi);
+      },
+      reason:'非通用机制覆盖（财与世爻生克，求财门「财克世为吉」反转）→可独立计' },
+    { id:'求财-5', menlei:'求财', desc:'子孙动生财（财有根源）', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yuanShenState; return !!(y && y.liuqin==='子孙' && !y.isKong && !y.isFuCang); },
+      reason:'子孙即妻财原神，与通用「原神得力+1」同源→去重' },
+    { id:'求财-6', menlei:'求财', desc:'父爻动克子孙（伤财之原神）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yuanShenState; return !!(y && y.liuqin==='子孙' && (y.isKong || y.isFuCang)); },
+      reason:'父克子孙=伤原神，与通用原神机制同源→去重' },
+
+    // ===== 功名门 =====
+    { id:'功名-1', menlei:'功名', desc:'子孙爻动（克官之神）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const j=g.jiShenState; return !!(j && j.liuqin==='子孙' && j.positions && j.positions.length>0); },
+      reason:'子孙即官鬼忌神，与通用「忌神有力−1」同源→去重' },
+    { id:'功名-2', menlei:'功名', desc:'官鬼旺相得生扶', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.liuqin==='官鬼' && typeof y.primaryIndex==='number'); },
+      reason:'属用神旺相范畴→归位用神本体±2计分，去重' },
+    { id:'功名-3', menlei:'功名', desc:'父母爻动（文书）生官', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yuanShenState; return !!(y && y.liuqin==='父母' && !y.isKong && !y.isFuCang); },
+      reason:'父母即官鬼原神，与通用「原神得力+1」同源→去重' },
+    { id:'功名-4', menlei:'功名', desc:'财动生官（纳粟成名）', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.liuqin==='官鬼'); },
+      reason:'财生官=用神得生，归位用神旺相范畴→去重' },
+    { id:'功名-5', menlei:'功名', desc:'官星持世', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen, s=g.shiYaoIndex; return !!(y && y.liuqin==='官鬼' && typeof y.primaryIndex==='number' && y.primaryIndex===s); },
+      reason:'属世爻与用神关系，与通用「持世+1」同源→去重' },
+    { id:'功名-7', menlei:'功名', desc:'财局会局生官生世', direction:'吉', overlap:'bufen', score:1,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.liuqin==='官鬼' && g.guaXiang && g.guaXiang.sanHe && g.guaXiang.sanHe.length); },
+      reason:'三合财局生官为门类特有，通用三合未精确计财局生官→部分去重，计差额+1' },
+
+    // ===== 婚姻门 =====
+    { id:'婚姻-1', menlei:'婚姻', desc:'财官相生', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; return !!(y && (y.liuqin==='妻财' || y.liuqin==='官鬼')); },
+      reason:'属用神旺相范畴（财官互动即用神得生）→归位计分，去重' },
+    { id:'婚姻-2', menlei:'婚姻', desc:'世应相生相合', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const s=g.shiYaoIndex, y=g.yingYaoIndex; if(s==null||y==null) return false;
+        const a=(g.yaoDetail||[])[s-1], b=(g.yaoDetail||[])[y-1]; return !!(a&&b&&a.dizhi&&b.dizhi&&isHeRW7(a.dizhi,b.dizhi)); },
+      reason:'与通用「世应相合+1」同源→去重' },
+    { id:'婚姻-3', menlei:'婚姻', desc:'世应冲克', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const s=g.shiYaoIndex, y=g.yingYaoIndex; if(s==null||y==null) return false;
+        const a=(g.yaoDetail||[])[s-1], b=(g.yaoDetail||[])[y-1]; return !!(a&&b&&a.dizhi&&b.dizhi&&isChongRW7(a.dizhi,b.dizhi)); },
+      reason:'与通用「世应相冲−1」同源→去重' },
+    { id:'婚姻-4', menlei:'婚姻', desc:'财动化凶（化退/回头克/化墓/化绝/化破）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
+        const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&a.isDong&&a.huiTou&&['化退神','回头克','化墓','化绝','化破'].indexOf(a.huiTou.type)!==-1); },
+      reason:'属用神化凶范畴，与通用「用神化退/回头克/化墓绝−2」同源→去重' },
+    { id:'婚姻-5', menlei:'婚姻', desc:'兄弟持世克妻财', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const s=g.shiYaoIndex, y=g.yongShen; if(s==null||!y||y.liuqin!=='妻财') return false;
+        const a=(g.yaoDetail||[])[s-1]; return !!(a&&a.liuqin==='兄弟'); },
+      reason:'兄弟=妻财忌神持世，与通用「忌神有力−1」同源→去重' },
+    { id:'婚姻-6', menlei:'婚姻', desc:'用神空破墓绝', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
+        const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&(a.kongType==='真空'||a.yuePo)); },
+      reason:'属用神旺衰范畴，与通用「用神空破−2」同源→去重' },
+    { id:'婚姻-7', menlei:'婚姻', desc:'用神暗动（心去难留）', direction:'凶', overlap:'fugai', score:-1,
+      check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
+        const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&a.riPoOrAnDong==='暗动'); },
+      reason:'非通用覆盖（暗动心去难留为婚姻门特有）。注：驿马数据系统未标注，本批降级只判暗动，驿马待第二批补' },
+
+    // ===== 疾病门（第一批：语义显式化，全部 score=0，方向反转属第二批）=====
+    { id:'疾病-1', menlei:'疾病', desc:'子孙制鬼（医药/解忧）', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const j=g.jiShenState; return !!(j && j.liuqin==='子孙'); },
+      reason:'疾病门子孙兼为医药/解忧之神，吉凶方向反转属第二批→本批仅显式化语义' },
+    { id:'疾病-2', menlei:'疾病', desc:'官鬼旺相（病重）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.liuqin==='官鬼' && y.wangShuaiScore && y.wangShuaiScore.index>0); },
+      reason:'病旺=凶方向反转牵动步2，属第二批→本批仅显式化语义' },
+    { id:'疾病-3', menlei:'疾病', desc:'近病用神旬空（逢空即愈）', direction:'吉', overlap:'fugai', score:0,
+      check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
+        const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&a.kongType!=='none'); },
+      reason:'近病逢空即愈须步2跳过空亡扣分，属第二批→本批仅显式化语义' },
+    { id:'疾病-4', menlei:'疾病', desc:'久病用神空破（不治）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
+        const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&(a.kongType==='真空'||a.yuePo)); },
+      reason:'与通用「用神空破−2」同源→去重' },
+    { id:'疾病-5', menlei:'疾病', desc:'六冲卦近病即愈', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ return !!(g.guaXiang && g.guaXiang.liuChong); },
+      reason:'近病逢冲即愈与通用「六冲−1」方向相反，属第二批→本批仅显式化语义' },
+    { id:'疾病-6', menlei:'疾病', desc:'六冲卦久病不治', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ return !!(g.guaXiang && g.guaXiang.liuChong); },
+      reason:'与通用「六冲−1」同源→去重' },
+    { id:'疾病-7', menlei:'疾病', desc:'鬼变用神/用神化鬼（慎防不测）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
+        const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&a.isDong&&a.huiTou&&a.huiTou.value==='化官鬼'); },
+      reason:'与通用「用神化鬼−2」同源→去重' },
+    { id:'疾病-8', menlei:'疾病', desc:'代占官鬼持世（忧神非病）', direction:'中', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen, s=g.shiYaoIndex; return !!(y && y.liuqin==='官鬼' && typeof y.primaryIndex==='number' && y.primaryIndex===s); },
+      reason:'代占官鬼持世为忧神非病，门类特有语义→仅显式化，不计分' },
+    { id:'疾病-9', menlei:'疾病', desc:'忌神动生元神生用神（化凶为吉）', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ const j=g.jiShenState, y=g.yuanShenState; return !!(j&&j.positions&&j.positions.length>0&&y&&!y.isKong&&!y.isFuCang); },
+      reason:'连生化凶为吉的门类语义，方向判定属第二批→本批仅显式化' }
+];
+
+/**
+ * 策3 · 去重护栏主函数：在 suanDuanGua 步6.5「察门类」后调用。
+ * @param {object} guaInfo - 已含 menlei/yongShen/jiShenState/yuanShenState/guaXiang/yaoDetail/shiYaoIndex/yingYaoIndex
+ * @param {number} score - 当前累计分值
+ * @returns {{score:number, entries:Array}} entries 为门类专属判据（由调用方 push 入 chain）
+ */
+function applyMenLeiScoring(guaInfo, score) {
+    const entries = [];
+    const menlei = guaInfo.menlei;
+    if (!menlei) return { score: score, entries: entries };
+    const rules = MENLEI_RULES.filter(r => r.menlei === menlei);
+    for (const r of rules) {
+        let triggered = false;
+        try { triggered = r.check(guaInfo); } catch (e) { triggered = false; }
+        if (!triggered) continue;
+        if (r.overlap === 'tongyuan') {
+            entries.push({ jueJu: '察门类·' + menlei, jieLun: r.desc + '（已归位通用机制计分，门类不双计）', yiJu: r.reason });
+        } else {
+            score += r.score;
+            entries.push({ jueJu: '察门类·' + menlei, jieLun: r.desc + '（门类专属计分 ' + (r.score > 0 ? '+' : '') + r.score + '）', yiJu: r.reason });
+        }
+    }
+    return { score: score, entries: entries };
+}
 
 // 门类关键词表（严格以《增删卜易》门目为纲；长词/专词优先，避免"官/子/找"等单字误判）
 // 用神取法谨遵古法：婚姻男财女官、功名官鬼、求财妻财、疾病官鬼、出行父母、
@@ -1665,7 +1811,79 @@ const ANLI = [
         source: '独发章',
         duan: '戌土子孙一爻独发，友人谓昨日丙戌定应大晴，如何犹雨？余曰：尔忧麦被水冲，神以子孙发动克去身边之鬼，令尔勿忧，非应晴也；决不至于涨水，阴晴亦在卯日方大晴（动而逢合之日）。果于卯日大晴。',
         yongShen: '子孙', yongShenIndex: 6
-    }
+    },
+    // ==== 策3 扩库 · 求财门 ====
+    { gua:'泽火革', yue:'酉', ri:'戊午', dong:[], source:'求财章·父兄爻动无殊缘木求鱼条',
+      duan:'断曰：卦中财爻不现，亥水兄爻持世，父临月建，生助兄爻，如缘木以求鱼也。',
+      yongShen:'妻财', yongShenIndex:null, yingqiIndex:null,
+      note:'财伏不现+兄爻持世+父临月建生兄=缘木求鱼（凶）' },
+    { gua:'火水未济', yue:'巳', ri:'丙辰', dong:['巳火','寅木'], source:'求财章·兄如太过反不克财条',
+      duan:'断曰：此卦月建世爻，动变之爻，俱是兄弟，占时顺遂，至九月，兄爻入墓，因奸破耗，岂可谓之兄爻太过反不劫其财耶？！',
+      yongShen:'妻财', yongShenIndex:4, yingqiIndex:null,
+      note:'兄爻太过仍劫财，入墓之日（戌月）破耗' },
+    { gua:'火地晋', yue:'未', ri:'丁卯', dong:[], source:'求财章·世遇兄临必难求望条',
+      duan:'断曰：兄爻持世，固曰无财，但喜卯日，即是财星。古以财爻克世、冲世者必得；况应爻未土旺而生世，明日必获。果得于辰日。',
+      yongShen:'妻财', yongShenIndex:3, yingqiIndex:null,
+      note:'兄持世本忌，但日辰卯木作财冲克世，应爻未土旺而生世，反许得财' },
+    { gua:'火天大有', yue:'寅', ri:'庚戌', dong:[], source:'求财章·寅月庚戌日占求财',
+      duan:'断曰：寅木财爻为用神，临月建而旺相，财爻克世，此财必得。但目下尚空，要到甲寅日出空可得。果于甲寅得之。',
+      yongShen:'妻财', yongShenIndex:2, yingqiIndex:2,
+      note:'财旺临月+财克世=必得；财爻旬空（寅卯空），出空应期甲寅日' },
+    { gua:'水火既济', yue:'巳', ri:'丁巳', dong:['子水','丑土','亥水','卯木'], source:'求财章·世遇兄临条',
+      duan:'断曰：若占久远之财，则无财也。若问目下之财，明日戊午必得。其故何也？盖兄临世爻，日破月破，不克变出之财，况日月俱作财来冲世，只因应爻逢空，明日冲实，定送财来。果于次日送来。',
+      yongShen:'妻财', yongShenIndex:null, yingqiIndex:null,
+      note:'本卦无财，财在变爻/日月。兄临世日破月破+日月作财冲世=目下得财；久远则无' },
+    // ==== 功名门 ====
+    { gua:'地火明夷', yue:'辰', ri:'乙未', dong:['丑土'], source:'终身功名有无章·鬼财摇发纳粟成名条',
+      duan:'此公原是武荫，巳任卑官，因病告退，即无官矣。问将来还有功名否？此卦丑土官星持世，化出午火，财旺生官之兆。卯年占，巳年援例，连连加纳，官至府佐。未年出仕，戌年升任黄堂。',
+      yongShen:'官鬼', yongShenIndex:4, yingqiIndex:null,
+      note:'官星持世化财回头生=财旺生官成名（吉）' },
+    { gua:'泽水困', yue:'戌', ri:'壬子', dong:['寅木'], source:'终身功名有无章·鬼财摇发条',
+      duan:'寅财持世，化出官星，终身功名以财而得，但六合变六冲，有始无终之象，恐不能出仕。占后援例考职，双目失明。',
+      yongShen:'官鬼', yongShenIndex:3, yingqiIndex:null,
+      note:'财化官本吉，但六合（困）变六冲（兑）有始无终=凶' },
+    { gua:'山风蛊', yue:'戌', ri:'戊辰', dong:[], source:'终身功名有无章·独旺于官立功建业条',
+      duan:'日月作财生世，白虎临金官持世，若入文途，必以援例；若入武途，可以立功。后随营破寨，奋勇当先，主帅嘉之，即以职官。不出五载，连建奇功，官至元戎将军。',
+      yongShen:'官鬼', yongShenIndex:3, yingqiIndex:null,
+      note:'官星持世+日月生之=立功成名（吉）' },
+    { gua:'艮为山', yue:'卯', ri:'甲申', dong:['子水','申金','辰土'], source:'乡试会试章·三合无冲联登甲第条',
+      duan:'寅木旺官持世，申日冲之暗动，又得日辰会成财局，不惟不克世爻，反来生世，一定高捷。果得及第。',
+      yongShen:'官鬼', yongShenIndex:6, yingqiIndex:null,
+      note:'旺官持世+日辰暗动+日辰会财局生世=高捷及第（吉）' },
+    // ==== 婚姻门 ====
+    { gua:'地火明夷', yue:'未', ri:'己未', dong:['丑土'], source:'婚姻章·男卜女姻财要旺条',
+      duan:'断曰：丑官持世，虽临月破日破，幸得动化财爻回头之生，目下虽破，终有不破之时。明岁丑年，定逢佳偶。果次年四月得配良姻。',
+      yongShen:'妻财', yongShenIndex:null, yingqiIndex:4,
+      note:'本卦无财，财在变爻（世化财回头生）。官持世化财回头生=财来生世/官（吉）；世爻月破日破，出破之年应佳偶' },
+    { gua:'雷风恒', yue:'子', ri:'癸酉', dong:['戌土'], source:'婚姻章·子月癸酉日自占婚',
+      duan:'断曰：酉官持世，戌土财爻动而生之，又得世应相生，戌土虽值旬空，动不为空，明日出空之日，求之必允。果于次日巳时允婚，夫妇白头相守，儿女成行。',
+      yongShen:'妻财', yongShenIndex:6, yingqiIndex:6,
+      note:'财爻戌土动而生世（官）+世应相生=白头偕老（吉）' },
+    { gua:'地泽临', yue:'寅', ri:'丙午', dong:['亥水','丑土'], source:'婚姻章·财值休囚破散条',
+      duan:'觉子曰：女家占男，以官为用，以应爻为男家，此古法也，亦死法也。此一卦也，关乎男女二人，财被回头克，又逢丑土之克，如何能生卯木之官？男女不能相合相生，婚姻虽成，亦当有变。后果聘定于四月，未及成婚，被贼兵于四月内劫去。',
+      yongShen:'官鬼', yongShenIndex:2, yingqiIndex:null,
+      note:'女家代占男，官持世婚必成，但财被回头克+丑土克=男女不相生，成而有变（凶）' },
+    { gua:'地天泰', yue:'酉', ri:'辛巳', dong:[], source:'夫妇章·财旺兄衰终须反目条',
+      duan:'兄爻持世，以克妻财，幸亥水财爻，酉月生之，财旺，难于克害。余曰：巳日冲动亥水，又临驿马，妻财临马而暗动，心去难留，生离之象也。后竟生离。',
+      yongShen:'妻财', yongShenIndex:5, yingqiIndex:null,
+      note:'兄持世克财+财临马暗动（心去难留）=生离（凶）' },
+    // ==== 疾病门 ====
+    { gua:'水雷屯', yue:'午', ri:'甲寅', dong:['子水','寅木'], source:'医占往治章·弟占兄病',
+      duan:'余即笑而言曰：列位放心，今日半夜退灾，明日卯日即起床矣。此卦中之子孙爻者，是药耶？是解忧之神耶？盖此人虽是险症，其实乃近病，子水兄爻值旬空，近病逢空即愈，值半夜子时而不空也。果于子时退灾，次日起床。',
+      yongShen:'兄弟', yongShenIndex:6, yingqiIndex:6,
+      note:'弟占兄病，用神兄子水旬空+近病逢空即愈+子孙解忧=半夜退灾（吉）' },
+    { gua:'雷风恒', yue:'申', ri:'庚寅', dong:['酉金'], source:'疾病章·用化鬼鬼化用慎防不测条',
+      duan:'断曰：鬼变子孙，夭折之兆，幸子孙临旬空，近病即愈，恐其难过午年。果在出空之日而愈。辰年占卦，至午年痘症而死。',
+      yongShen:'子孙', yongShenIndex:4, yingqiIndex:4,
+      note:'占子近病，鬼变子孙本夭折兆，幸子孙旬空近病即愈（先吉），午年出空犯鬼死（后凶）' },
+    { gua:'天山遁', yue:'申', ri:'壬子', dong:[], source:'疾病章·鬼持世病虽轻而难疗条',
+      duan:'断曰：令郎今日即愈。彼问：何以知之？余曰：官鬼持世，尔之忧也，今日子日，冲去忧心，管许立愈。果愈于本日。',
+      yongShen:'子孙', yongShenIndex:null, yingqiIndex:null,
+      note:'代占子病，子孙伏初爻辰下（本卦无子孙）。官鬼持世=忧神非病，子日冲去忧心立愈（吉）' },
+    { gua:'坤为地', yue:'寅', ri:'乙未', dong:['巳火','卯木'], source:'痘疹章·占女儿痘',
+      duan:'酉金子孙，虽则春令休囚，得日辰生之，二爻巳火动而克金，得未日冲动丑土，火动生土，土动生金，花虽密而无妨，今日未申时有救。果于申时得明医救治。',
+      yongShen:'子孙', yongShenIndex:6, yingqiIndex:null,
+      note:'占女儿痘，用神子孙酉金休囚得日生+忌神父巳火动克，火生土土生金=有救（吉）' }
 ];
 
 /**

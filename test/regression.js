@@ -155,8 +155,11 @@ function liuqinAt(guaName, idx) {
 }
 ANLI.forEach((a, i) => {
     assert(!!ALL_GUA_DATA.find(x => x.卦名 === a.gua), 'ANLI[' + i + '] 卦名存在: ' + a.gua);
-    const actualLq = liuqinAt(a.gua, a.yongShenIndex);
-    assert(actualLq === a.yongShen, 'ANLI[' + i + '] ' + a.gua + ' 取用爻六亲自洽(' + a.yongShen + '@' + a.yongShenIndex + '爻, 实际' + actualLq + ')');
+    // 策3：yongShenIndex 为 null（用神伏藏/变爻之财/伏神等合法场景）时跳过六亲断言
+    if (a.yongShenIndex != null) {
+        const actualLq = liuqinAt(a.gua, a.yongShenIndex);
+        assert(actualLq === a.yongShen, 'ANLI[' + i + '] ' + a.gua + ' 取用爻六亲自洽(' + a.yongShen + '@' + a.yongShenIndex + '爻, 实际' + actualLq + ')');
+    }
     assert((a.dong || []).every(d => /^[子丑寅卯辰巳午未申酉戌亥][金木水火土]$/.test(d)), 'ANLI[' + i + '] ' + a.gua + ' 动爻为地支+五行格式');
 });
 // 小畜案例字段语义：取用=4(应爻未土) / 应期=3(辰土出空)，与算法"舍空取实"一致
@@ -204,6 +207,59 @@ const gw2 = { yaoDetail: [
 gw2.yongShen = { liuqin: '妻财', positions: [3], primaryIndex: 3, dizhi: '辰', reason: '测试' };
 suanDuanGua(gw2);
 assert(gw2.duanGua.score >= 2, 'P1加权 用神旺相+2生效(实际评分' + gw2.duanGua.score + ')');
+
+// ---- 策3 四门去重护栏回归断言 ----
+// 1. 求财：财克世独立 +1（火天大有 寅月庚戌日，寅木财克辰土世）
+let gml = {
+    menlei:'求财',
+    yongShen:{ liuqin:'妻财', primaryIndex:2, dizhi:'寅' },
+    shiYaoIndex:3,
+    yaoDetail:[
+        { dizhi:'子', liuqin:'子孙' }, { dizhi:'寅', liuqin:'妻财' }, { dizhi:'辰', liuqin:'父母' },
+        { dizhi:'酉', liuqin:'兄弟' }, { dizhi:'未', liuqin:'父母' }, { dizhi:'巳', liuqin:'官鬼' }
+    ],
+    jiShenState:null, yuanShenState:null, guaXiang:{}
+};
+let rml = applyMenLeiScoring(gml, 0);
+assert(rml.score === 1, '策3 求财·财克世独立+1(实际' + rml.score + ')');
+assert(!rml.entries.some(e => e.jieLun.indexOf('妻财旺相') !== -1 && e.jieLun.indexOf('专属计分') !== -1), '策3 求财·财旺同源去重不双计');
+
+// 2. 求财：财伏独立 -1（泽火革 财伏不现）
+gml = { menlei:'求财', yongShen:{ liuqin:'妻财', primaryIndex:'伏3', dizhi:'午' }, shiYaoIndex:4, yaoDetail:[], jiShenState:null, yuanShenState:null, guaXiang:{} };
+rml = applyMenLeiScoring(gml, 0);
+assert(rml.score === -1, '策3 求财·财伏独立-1(实际' + rml.score + ')');
+
+// 3. 功名：官持世同源去重（山风蛊 官鬼持世）
+gml = { menlei:'功名', yongShen:{ liuqin:'官鬼', primaryIndex:3, dizhi:'酉' }, shiYaoIndex:3,
+    yaoDetail:[
+        { dizhi:'丑', liuqin:'妻财' }, { dizhi:'亥', liuqin:'父母' }, { dizhi:'酉', liuqin:'官鬼' },
+        { dizhi:'戌', liuqin:'妻财' }, { dizhi:'子', liuqin:'父母' }, { dizhi:'寅', liuqin:'兄弟' }
+    ],
+    jiShenState:{ liuqin:'子孙', positions:[], wangShuaiScore:{ index:0 } }, yuanShenState:{ liuqin:'父母', isKong:false, isFuCang:false }, guaXiang:{} };
+rml = applyMenLeiScoring(gml, 0);
+assert(rml.score === 0, '策3 功名·官持世同源去重(实际' + rml.score + ')');
+assert(rml.entries.some(e => e.jieLun.indexOf('官星持世') !== -1), '策3 功名·官持世语义已push');
+
+// 4. 婚姻：兄持世同源去重 + 用神暗动独立 -1（地天泰 财暗动）
+gml = { menlei:'婚姻', yongShen:{ liuqin:'妻财', primaryIndex:5, dizhi:'亥' }, shiYaoIndex:3,
+    yaoDetail:[
+        { dizhi:'子', liuqin:'妻财' }, { dizhi:'寅', liuqin:'官鬼' }, { dizhi:'辰', liuqin:'兄弟' },
+        { dizhi:'丑', liuqin:'兄弟' }, { dizhi:'亥', liuqin:'妻财', riPoOrAnDong:'暗动' }, { dizhi:'酉', liuqin:'子孙' }
+    ],
+    jiShenState:{ liuqin:'兄弟', positions:[3], wangShuaiScore:{ index:1 } }, yuanShenState:null, guaXiang:{} };
+rml = applyMenLeiScoring(gml, 0);
+assert(!rml.entries.some(e => e.jieLun.indexOf('兄弟持世') !== -1 && e.jieLun.indexOf('专属计分') !== -1), '策3 婚姻·兄持世同源去重');
+assert(rml.score === -1, '策3 婚姻·用神暗动独立-1(实际' + rml.score + ')');
+
+// 5. 疾病门：本批全部 score=0（不改变总分，仅语义）
+gml = { menlei:'疾病', yongShen:{ liuqin:'官鬼', primaryIndex:2, dizhi:'午', wangShuaiScore:{ index:1 } }, shiYaoIndex:2,
+    yaoDetail:[
+        { dizhi:'辰', liuqin:'父母' }, { dizhi:'午', liuqin:'官鬼', kongType:'真空' }, { dizhi:'申', liuqin:'兄弟' },
+        { dizhi:'戌', liuqin:'父母' }, { dizhi:'子', liuqin:'妻财' }, { dizhi:'寅', liuqin:'子孙' }
+    ],
+    jiShenState:null, yuanShenState:null, guaXiang:{ liuChong:true } };
+rml = applyMenLeiScoring(gml, 0);
+assert(rml.score === 0, '策3 疾病门本批不改变总分(实际' + rml.score + ')');
 
 console.log(fail ? ('回归失败 ' + fail + ' 项') : '回归全部通过');
 process.exit(fail ? 1 : 0);
