@@ -680,6 +680,14 @@
                 </select>
                 <input type="text" id="jgUserQuestion" class="q-writable" placeholder="填写其他所问之事" style="display:none;">
             </div>
+            <div class="field-group fluid" id="jinBingWrap" style="display:none;">
+                <label for="jgJinBingSel">病程（疾病专用）</label>
+                <select id="jgJinBingSel" class="q-select">
+                    <option value="近病">近病（新发/急症）</option>
+                    <option value="久病">久病（宿疾/慢性）</option>
+                    <option value="否" selected>未定/不详</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -1141,6 +1149,8 @@
                 userInfo.gender = jgGender ? jgGender.value : '';
                 userInfo.birth = jgBirth.value.trim() || '';
                 userInfo.question = jgQuestion.value.trim() || '';
+                const jbSel = document.getElementById('jgJinBingSel');
+                userInfo.jinBing = (jbSel ? jbSel.value : '') || '';
             } else {
                 // 兜底：从 localStorage 读取
                 try {
@@ -1218,6 +1228,7 @@
                     userGender: userInfo.gender || '',
                     userBirth: userInfo.birth || '',
                     userQuestion: userInfo.question || '',
+                    userJinBing: userInfo.jinBing || '',
                     // qiGuaTime 不传给 AI（起卦方式对释卦是干扰）
 
                     // ⭐ 世应位置（直接从排盘结果读取，文本化）
@@ -1451,6 +1462,7 @@
                             <div class="user-row">
                                 <span>❓ 所问：${questionText}</span>
                             </div>
+                            ${userInfo.jinBing && (userInfo.jinBing === '近病' || userInfo.jinBing === '久病') ? `<div class="user-row"><span>🏥 病程：${escapeHtml(userInfo.jinBing === '近病' ? '近病（新发/急症）' : '久病（宿疾/慢性）')}</span></div>` : ''}
                         </div>
                         ${guaInfo.wordNonStandard ? `<div style="margin:12px 0;padding:10px 14px;background:#fdecea;border:1px solid #f5c6cb;border-radius:10px;color:#c0392b;font-size:14px;line-height:1.7;">⚠ <strong>所问之事用词不规范</strong>，系统只能<strong>「通解」</strong>——按六爻常理泛论，不作专门门类断语。请改用《使用指南·用户字典》中的标准事情词。</div>` : ''}
                         <div class="body">${resultHtml}</div>
@@ -1502,6 +1514,7 @@
                     .trim();
                 window.__guaResultText = `【卦象解读 · ${guaData.benGuaName} → ${guaData.bianGuaName}】
 求卦者：${userText}
+🏥 病程：${userInfo.jinBing ? (userInfo.jinBing === '近病' ? '近病（新发/急症）' : '久病（宿疾/慢性）') : '（未填）'}
 起卦时间：${timeText}
 月建：${timeInfo.yueJian || '未知'}月　日辰：${timeInfo.riChen || '未知'}日　时辰：${timeInfo.shiChen || '未知'}时　旬空：${timeInfo.xunKong || '—'}
 所问之事：${questionText}
@@ -1708,30 +1721,32 @@ ${cleanResult}
             setVal('jgUserGender', saved.gender || '男');
             setVal('jgUserBirth', saved.birth);
             setVal('jgUserQuestion', saved.question); // 值载体暂存，下方按门类同步显隐
+            setVal('jgJinBingSel', saved.jinBing);
 
-            // ⭐ 所问之事：下拉↔可写框 视觉合一（与起卦页同逻辑）
-            const selEl = document.getElementById('jgQuestionSelect');
-            const qEl = document.getElementById('jgUserQuestion');
-            if (selEl && qEl) {
-                const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
-                const showSelect = () => { selEl.style.display = ''; qEl.style.display = 'none'; };
-                const showInput = () => { selEl.style.display = 'none'; qEl.style.display = 'block'; qEl.focus(); };
-                selEl.addEventListener('change', () => {
-                    const v = selEl.value;
-                    if (v === '__other__') { showInput(); if (MENLEI_4.indexOf(qEl.value.trim()) !== -1) qEl.value = ''; }
-                    else if (v) { qEl.value = v; showSelect(); }
-                    else { qEl.value = ''; showSelect(); }
-                });
-                qEl.addEventListener('input', () => {
-                    const v = qEl.value.trim();
-                    if (MENLEI_4.indexOf(v) !== -1) { selEl.value = v; qEl.value = v; showSelect(); }
-                });
-                // 依据当前值初始化可见控件（固化词→下拉；其余→可写框）
-                const cur = (qEl.value || '').trim();
-                if (MENLEI_4.indexOf(cur) !== -1) { selEl.value = cur; showSelect(); }
-                else if (cur) { selEl.value = '__other__'; showInput(); }
-                else { selEl.value = ''; showSelect(); }
-            }
+        // ⭐ 所问之事：下拉↔可写框 视觉合一（与起卦页同逻辑）
+        const selEl = document.getElementById('jgQuestionSelect');
+        const qEl = document.getElementById('jgUserQuestion');
+        const jbWrap = document.getElementById('jinBingWrap');
+        if (selEl && qEl) {
+            const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
+            const showSelect = () => { selEl.style.display = ''; qEl.style.display = 'none'; };
+            const showInput = () => { selEl.style.display = 'none'; qEl.style.display = 'block'; qEl.focus(); };
+            selEl.addEventListener('change', () => {
+                const v = selEl.value;
+                if (v === '__other__') { showInput(); if (MENLEI_4.indexOf(qEl.value.trim()) !== -1) qEl.value = ''; if (jbWrap) jbWrap.style.display = 'none'; }
+                else if (v) { qEl.value = v; showSelect(); if (jbWrap) jbWrap.style.display = (v === '疾病') ? '' : 'none'; }
+                else { qEl.value = ''; showSelect(); if (jbWrap) jbWrap.style.display = 'none'; }
+            });
+            qEl.addEventListener('input', () => {
+                const v = qEl.value.trim();
+                if (MENLEI_4.indexOf(v) !== -1) { selEl.value = v; qEl.value = v; showSelect(); }
+            });
+            // 依据当前值初始化可见控件（固化词→下拉；其余→可写框）
+            const cur = (qEl.value || '').trim();
+            if (MENLEI_4.indexOf(cur) !== -1) { selEl.value = cur; showSelect(); if (jbWrap) jbWrap.style.display = (cur === '疾病') ? '' : 'none'; }
+            else if (cur) { selEl.value = '__other__'; showInput(); if (jbWrap) jbWrap.style.display = 'none'; }
+            else { selEl.value = ''; showSelect(); if (jbWrap) jbWrap.style.display = 'none'; }
+        }
         })();
 
         console.log('✅ 解卦页面已加载（含时间信息）');

@@ -11,7 +11,8 @@ async function callQwen(guaInfo, modelKey) {
         name: guaInfo.userName || '',
         gender: guaInfo.userGender || '未填',
         birth: guaInfo.userBirth || '',
-        question: guaInfo.userQuestion || '此事'
+        question: guaInfo.userQuestion || '此事',
+        jinBing: guaInfo.userJinBing || ''
     };
 
     const timeInfo = guaInfo.timeInfo || {};
@@ -119,12 +120,18 @@ async function callQwen(guaInfo, modelKey) {
 【数据】卦象数据已按古法算定，你只解读不推演；用神理由须原文复述；标注与判断冲突时以标注为准。
 【应期】应期候选已由引擎推算，解读时必须引用【应期候选】中的日期，严禁自行推演干支计算。
 【门类】当给出门类断法要点时，必须以该门类断法为分析框架。
+【疾病门·病程差异】占疾病时须依【病程】字段分化断语：
+- 近病：多为实邪、正气尚充，逢空亡/六冲易愈（吉向），释文须明确"近病"字样。
+- 久病：多属虚损、正气已亏，逢空亡/六冲多凶（顽疾难起），释文须明确"久病"字样。
+- 断语须与【断卦依据链】中近/久病标注一致，冲突以标注为准。
+- ⚠ 严禁使用"若为新病则近期可愈"等条件套语。病程已知，须直接给出针对性的断语。
 【专业详解六步】用神取舍／月建影响／日辰影响／世应关系／动爻之变／综合断语与应期（应期引用候选日期）。`;
 
     const userPrompt = `【固定首句】
 ${fixedOpening}
 
 【所问之事】${userInfo.question || '（未提供）'}
+【病程】${userInfo.jinBing || '（非疾病门类或未填）'}
 
 【卦象数据（已排定，请直接使用，勿自行推演）】
 本卦：${guaInfo.benGua}（${guaInfo.benPalace || ''}）
