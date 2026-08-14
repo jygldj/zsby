@@ -873,8 +873,8 @@ function jiShenChouShen(guaInfo) {
         const sc = jiWangShuaiScore(top.y, guaInfo);
         const liuqin = top.y.liuqin;
         const duanYu = (name === '忌神')
-            ? `忌神（${liuqin}）${sc.score >= 0 ? '有力' : '无力'}，宜防其克用`
-            : `仇神（${liuqin}）${sc.score >= 0 ? '有力' : '无力'}，宜防其克原神`;
+            ? `忌神（${liuqin}）${sc.score > 0 ? '有力' : '无力'}，宜防其克用`
+            : `仇神（${liuqin}）${sc.score > 0 ? '有力' : '无力'}，宜防其克原神`;
         return { liuqin:liuqin, positions:items.map(it => it.idx), wangShuaiScore:{index:sc.score,detail:sc.detail}, duanYu:duanYu };
     }
 
@@ -1299,6 +1299,14 @@ function tuiYingQi(guaInfo, startDate) {
 //       jiSuanShiYaoZhuangTai、suanQuanBuGuaXiang。
 // ============================================================
 
+// 策3 第二批 · 驿马引擎（年支起驿马）：申子辰→寅，亥卯未→巳，寅午戌→申，巳酉丑→亥
+function suanYiMa(timeInfo) {
+    const nianGanZhi = (timeInfo && timeInfo.nianGanZhi) || '';
+    const nianZhi = nianGanZhi.length >= 2 ? nianGanZhi.charAt(1) : '';
+    const MAP = { '申':'寅', '子':'寅', '辰':'寅', '亥':'巳', '卯':'巳', '未':'巳', '寅':'申', '午':'申', '戌':'申', '巳':'亥', '酉':'亥', '丑':'亥' };
+    return MAP[nianZhi] || null;
+}
+
 function suanDuanGua(guaInfo) {
     const chain = [];
     const yaoDetail = guaInfo.yaoDetail || [];
@@ -1307,6 +1315,10 @@ function suanDuanGua(guaInfo) {
     const yueJian = timeInfo.yueJian || '';
     const riChen = timeInfo.riChen || '';
     const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
+    const menlei = guaInfo.menlei || '';
+    const yiMa = suanYiMa(timeInfo);
+    guaInfo.yiMa = yiMa;
+    const jb = (guaInfo.userInfo && guaInfo.userInfo.jinBing) || '否';
     const yongShen = guaInfo.yongShen || null;
     let score = 0;
 
@@ -1332,9 +1344,14 @@ function suanDuanGua(guaInfo) {
         const wangShuai = sc.score > 0 ? '旺相' : (sc.score < 0 ? '休囚' : '平');
         add('察旺衰', '用神' + yongYao.dizhi + ' ' + wangShuai + '(评分' + sc.score + ')', sc.detail || '月日生克综合');
         // P1 权重（用神为尊）：用神本体一等 ±2，月破/真空重罚
-        score += (sc.score > 0 ? 2 : (sc.score < 0 ? -2 : 0));
-        if (yongYao.yuePo) { add('察旺衰', '用神月破', '月建' + yueJian + '冲' + yongYao.dizhi + '，根枯难用'); score -= 2; }
-        if (yongYao.kongType === '真空') { add('察旺衰', '用神真空', '旬空且无生扶，如石沉大海终不可得'); score -= 2; }
+        const base = (sc.score > 0 ? 2 : (sc.score < 0 ? -2 : 0));
+        score += (menlei === '疾病') ? -base : base;
+        if (yongYao.yuePo) { add('察旺衰', '用神月破', '月建' + yueJian + '冲' + yongYao.dizhi + '，根枯难用'); if (menlei === '疾病' && (guaInfo.userInfo && guaInfo.userInfo.jinBing === '近病')) score += 2; else score -= 2; }
+        if (menlei === '疾病' && jb === '近病') {
+            if (yongYao.kongType !== 'none') { add('察旺衰', '用神旬空（近病）', '近病逢空即愈，不药而痊'); score += 1; }
+        } else if (menlei === '疾病' && jb === '久病') {
+            if (yongYao.kongType !== 'none') { add('察旺衰', '用神旬空（久病）', '久病逢空，元气难继，病势沉疴'); score -= 2; }
+        } else if (yongYao.kongType === '真空') { add('察旺衰', '用神真空', '旬空且无生扶，如石沉大海终不可得'); score -= 2; }
         else if (yongYao.kongType === '假空') { add('察旺衰', '用神旬空', '逢空，事成须待出空'); score--; }
     } else if (yongShen && yongShen.dizhi) {
         add('察旺衰', '用神伏藏(' + yongShen.dizhi + ')', '伏神之旺衰以飞伏生克论');
@@ -1388,28 +1405,35 @@ function suanDuanGua(guaInfo) {
     if (guaInfo.jiShenState && guaInfo.jiShenState.liuqin) {
         const js = guaInfo.jiShenState;
         add('看忌仇元神', '忌神' + js.liuqin + (js.positions.length ? ('在第' + js.positions.join('、') + '爻') : ''), js.duanYu || '');
-        if (js.wangShuaiScore && js.wangShuaiScore.index > 0) { add('看忌仇元神', '忌神有力', '忌神旺相克用，防其害'); score--; }
-        else { add('看忌仇元神', '忌神无力', '忌神休囚，克用之力有限'); score++; }
+        if (js.wangShuaiScore && js.wangShuaiScore.index > 0) { add('看忌仇元神', '忌神有力', '忌神旺相克用，防其害'); score += (menlei === '疾病' ? 1 : -1); }
+        else { add('看忌仇元神', '忌神无力', '忌神休囚，克用之力有限'); score += (menlei === '疾病' ? -1 : 1); }
     } else {
         add('看忌仇元神', '忌神状态', '未构成明显忌神或数据缺失');
     }
     if (guaInfo.chouShenState && guaInfo.chouShenState.liuqin) {
         const cs = guaInfo.chouShenState;
-        add('看忌仇元神', '仇神' + cs.liuqin, cs.duanYu || '');
-        if (cs.wangShuaiScore && cs.wangShuaiScore.index > 0) score--;
+        if (cs.wangShuaiScore && cs.wangShuaiScore.index > 0) {
+            score--;
+            let note = '仇神（' + cs.liuqin + '）旺相，事有阻滞';
+            if (menlei === '疾病')
+                note = '仇神（妻财）旺相，于疾病门中为双刃之象—既助药力（生子孙），亦耗元气（克父母原神），仍有牵制之虑';
+            add('看忌仇元神', note, '仇神旺相克原神，防其牵制');
+        } else {
+            add('看忌仇元神', '仇神' + cs.liuqin, cs.duanYu || '');
+        }
     }
     if (guaInfo.yuanShenState) {
         const ys = guaInfo.yuanShenState;
         const ysState = ys.isFuCang ? '伏藏' : (ys.isKong ? '旬空' : '得力');
         add('看忌仇元神', '原神' + (ys.liuqin || '') + ysState, ys.duanYu || '');
-        if (ys.isKong || ys.isFuCang) score--;
-        else score++;
+        if (ys.isKong || ys.isFuCang) score += (menlei === '疾病' ? 1 : -1);
+        else score += (menlei === '疾病' ? -1 : 1);
     } else {
         add('看忌仇元神', '原神状态', '未计算或数据缺失');
     }
 
     // 步6 察卦象
-    if (guaXiang.liuChong) { add('察卦象', '六冲卦', '六冲主散，占久远事不利，主快主凶'); score--; }
+    if (guaXiang.liuChong) { add('察卦象', '六冲卦', '六冲主散，占久远事不利，主快主凶'); score += (menlei === '疾病' ? ((jb === '近病') ? 1 : -1) : -1); }
     if (guaXiang.liuHe) { add('察卦象', '六合卦', '六合主合和，占事多顺'); score++; }
     if (guaXiang.fanYin) { add('察卦象', '反吟', '卦反吟，事多反复，主劳而无功'); score--; }
     if (guaXiang.fuYin) { add('察卦象', '伏吟', '卦伏吟，事主呻吟迟滞，进退两难'); score--; }
@@ -1617,7 +1641,10 @@ const MENLEI_RULES = [
     { id:'婚姻-7', menlei:'婚姻', desc:'用神暗动（心去难留）', direction:'凶', overlap:'fugai', score:-1,
       check:(g)=>{ const y=g.yongShen; if(!y||typeof y.primaryIndex!=='number') return false;
         const a=(g.yaoDetail||[])[y.primaryIndex-1]; return !!(a&&a.riPoOrAnDong==='暗动'); },
-      reason:'非通用覆盖（暗动心去难留为婚姻门特有）。注：驿马数据系统未标注，本批降级只判暗动，驿马待第二批补' },
+      reason:'非通用覆盖（暗动心去难留为婚姻门特有）' },
+    { id:'婚姻-8', menlei:'婚姻', desc:'用神临驿马（缘分或婚事有变动之机）', direction:'中', overlap:'tongyuan', score:0,
+      check:(g)=>{ const y=g.yongShen; return !!(y && y.dizhi && g.yiMa && y.dizhi===g.yiMa); },
+      reason:'驿马主变动，婚姻门用神临驿马为门类特有语义（suanYiMa 计算），仅显式化不双计' },
 
     // ===== 疾病门（第一批：语义显式化，全部 score=0，方向反转属第二批）=====
     { id:'疾病-1', menlei:'疾病', desc:'子孙制鬼（医药/解忧）', direction:'吉', overlap:'tongyuan', score:0,
@@ -1647,9 +1674,9 @@ const MENLEI_RULES = [
     { id:'疾病-8', menlei:'疾病', desc:'代占官鬼持世（忧神非病）', direction:'中', overlap:'tongyuan', score:0,
       check:(g)=>{ const y=g.yongShen, s=g.shiYaoIndex; return !!(y && y.liuqin==='官鬼' && typeof y.primaryIndex==='number' && y.primaryIndex===s); },
       reason:'代占官鬼持世为忧神非病，门类特有语义→仅显式化，不计分' },
-    { id:'疾病-9', menlei:'疾病', desc:'忌神动生元神生用神（化凶为吉）', direction:'吉', overlap:'tongyuan', score:0,
+    { id:'疾病-9', menlei:'疾病', desc:'忌神动生元神生用神（化吉为凶）', direction:'凶', overlap:'tongyuan', score:0,
       check:(g)=>{ const j=g.jiShenState, y=g.yuanShenState; return !!(j&&j.positions&&j.positions.length>0&&y&&!y.isKong&&!y.isFuCang); },
-      reason:'连生化凶为吉的门类语义，方向判定属第二批→本批仅显式化' }
+      reason:'连生=子孙生父母生官鬼=病得连环生助，实为化吉为凶，方向判定属第二批→本批仅显式化' }
 ];
 
 /**

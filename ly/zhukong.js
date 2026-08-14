@@ -367,7 +367,8 @@ const userInfo = {
     name: document.getElementById('userName').value || '',
     gender: document.getElementById('userGender').value || '男',
     birth: document.getElementById('userBirth').value || '',
-    question: document.getElementById('userQuestion').value || ''
+    question: document.getElementById('userQuestion').value || '',
+    jinBing: (document.getElementById('jinBingSel') ? document.getElementById('jinBingSel').value : '') || ''
 };
 
 try {
@@ -394,7 +395,8 @@ try {
                 name: userInfo.name, 
                 gender: userInfo.gender, 
                 birth: userInfo.birth, 
-                question: userInfo.question 
+                question: userInfo.question,
+                jinBing: userInfo.jinBing
             },
             timeInfo: null,
             result: '',

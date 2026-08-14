@@ -57,6 +57,14 @@
                 </select>
                 <input type="text" id="userQuestion" class="q-writable" placeholder="填写其他所问之事" style="display:none;">
             </div>
+            <div class="field-group fluid" id="jinBingWrap" style="display:none;">
+                <label for="jinBingSel">病程（疾病专用）</label>
+                <select id="jinBingSel" class="q-select">
+                    <option value="近病">近病（新发/急症）</option>
+                    <option value="久病">久病（宿疾/慢性）</option>
+                    <option value="否" selected>未定/不详</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -415,15 +423,19 @@
     // 下拉选择 → 联动
     sel.addEventListener('change', function () {
         const v = sel.value;
+        const jbWrap = document.getElementById('jinBingWrap');
         if (v === '__other__') {
             showInput();
             if (MENLEI_4.indexOf(qInput.value.trim()) !== -1) qInput.value = ''; // 清空误带的固化词
+            if (jbWrap) jbWrap.style.display = 'none';
         } else if (v) {
             qInput.value = v; // 固化项写入值载体
             showSelect();
+            if (jbWrap) jbWrap.style.display = (v === '疾病') ? '' : 'none';
         } else {
             qInput.value = ''; // 占位项「选择事项…」
             showSelect();
+            if (jbWrap) jbWrap.style.display = 'none';
         }
     });
 
@@ -440,9 +452,10 @@
     // 初始化：若已有值（tstj 跳转 / 回退 / 复填），同步控件可见状态
     function initFromValue() {
         const cur = (qInput.value || '').trim();
-        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; showSelect(); }
-        else if (cur) { sel.value = '__other__'; showInput(); }
-        else { sel.value = ''; showSelect(); }
+        const jbWrap = document.getElementById('jinBingWrap');
+        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; showSelect(); if (jbWrap) jbWrap.style.display = (cur === '疾病') ? '' : 'none'; }
+        else if (cur) { sel.value = '__other__'; showInput(); if (jbWrap) jbWrap.style.display = 'none'; }
+        else { sel.value = ''; showSelect(); if (jbWrap) jbWrap.style.display = 'none'; }
     }
     initFromValue();
 })();

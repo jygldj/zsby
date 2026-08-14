@@ -208,6 +208,32 @@ gw2.yongShen = { liuqin: '妻财', positions: [3], primaryIndex: 3, dizhi: '辰'
 suanDuanGua(gw2);
 assert(gw2.duanGua.score >= 2, 'P1加权 用神旺相+2生效(实际评分' + gw2.duanGua.score + ')');
 
+// B-1 验证：疾病门步2/步5 方向反转（用神旺相→凶；忌神有力→吉；原神得力→凶）
+function _mk(menlei){ return { yaoDetail:[
+  { dizhi:'卯', liuqin:'妻财', isDong:false, yuePo:false, kongType:'none', tianGan:'乙' },
+  { dizhi:'子', liuqin:'子孙', isDong:false, yuePo:false, kongType:'none', tianGan:'甲' },
+  { dizhi:'寅', liuqin:'兄弟', isDong:false, yuePo:false, kongType:'none', tianGan:'丙' },
+  { dizhi:'午', liuqin:'官鬼', isDong:false, yuePo:false, kongType:'none', tianGan:'戊' },
+  { dizhi:'辰', liuqin:'父母', isDong:false, yuePo:false, kongType:'none', tianGan:'庚' },
+  { dizhi:'申', liuqin:'兄弟', isDong:false, yuePo:false, kongType:'none', tianGan:'壬' }
+], bianYao:[], guaXiang:{}, shiYaoIndex:3, yingYaoIndex:6, fuShenList:[],
+  timeInfo:{ yueJian:'午', riChen:'丙午', xunKong:'', nianGanZhi:'丙午' }, userInfo:{ gender:'男', jinBing:'否' }, menlei:menlei }; }
+const gDis=_mk('疾病'); applyMenLeiContext(gDis); xuanYongShen(gDis,'疾病'); jiShenChouShen(gDis); jiSuanYuePo(gDis); jiSuanRiPoAnDong(gDis); jiSuanZhenKongJiaKong(gDis); jiSuanYuanShenKongFu(gDis,'疾病'); jiSuanShiYaoZhuangTai(gDis); suanQuanBuGuaXiang(gDis); tuiYingQi(gDis, new Date(2026,7,10)); suanDuanGua(gDis);
+const gCai=_mk('求财'); applyMenLeiContext(gCai); xuanYongShen(gCai,'求财'); jiShenChouShen(gCai); jiSuanYuePo(gCai); jiSuanRiPoAnDong(gCai); jiSuanZhenKongJiaKong(gCai); jiSuanYuanShenKongFu(gCai,'求财'); jiSuanShiYaoZhuangTai(gCai); suanQuanBuGuaXiang(gCai); tuiYingQi(gCai, new Date(2026,7,10)); suanDuanGua(gCai);
+assert(gDis.duanGua.score < 0, 'B-1 疾病门用神旺相→凶(实际'+gDis.duanGua.score+')');
+assert(gDis.duanGua.score < gCai.duanGua.score, 'B-1 疾病门较求财门符号相反反转('+gDis.duanGua.score+' vs '+gCai.duanGua.score+')');
+
+// B-5 验证：疾病门近病/久病分流（近病逢空即愈，久病逢空不治，近病逢冲+1/久病逢冲-1）
+function _run2(g, m, chong){ applyMenLeiContext(g); xuanYongShen(g,m); jiShenChouShen(g); jiSuanYuePo(g); jiSuanRiPoAnDong(g); jiSuanYuanShenKongFu(g,m); jiSuanShiYaoZhuangTai(g); if (chong) g.guaXiang = { liuChong: true }; tuiYingQi(g, new Date(2026,7,10)); suanDuanGua(g); }
+const gNear=_mk('疾病'); gNear.userInfo.jinBing='近病'; gNear.yaoDetail[3].kongType='真空'; _run2(gNear,'疾病', false);
+const gOld=_mk('疾病'); gOld.userInfo.jinBing='久病'; gOld.yaoDetail[3].kongType='真空'; _run2(gOld,'疾病', false);
+assert(gNear.duanGua.score > gOld.duanGua.score, 'B-5 疾病门近病较久病逢空更吉('+gNear.duanGua.score+' vs '+gOld.duanGua.score+')');
+assert(gOld.duanGua.score < 0, 'B-5 疾病门久病逢空→凶(实际'+gOld.duanGua.score+')');
+const gNearChong=_mk('疾病'); gNearChong.userInfo.jinBing='近病'; gNearChong.yaoDetail[3].kongType='真空'; _run2(gNearChong,'疾病', true);
+assert(gNearChong.duanGua.score > gNear.duanGua.score, 'B-5 疾病门近病逢冲较无冲更吉(+1)(实际'+gNearChong.duanGua.score+' vs '+gNear.duanGua.score+')');
+const gOldChong=_mk('疾病'); gOldChong.userInfo.jinBing='久病'; gOldChong.yaoDetail[3].kongType='真空'; _run2(gOldChong,'疾病', true);
+assert(gOldChong.duanGua.score < gOld.duanGua.score, 'B-5 疾病门久病逢冲较无冲更凶(-1)(实际'+gOldChong.duanGua.score+' vs '+gOld.duanGua.score+')');
+
 // ---- 策3 四门去重护栏回归断言 ----
 // 1. 求财：财克世独立 +1（火天大有 寅月庚戌日，寅木财克辰土世）
 let gml = {
@@ -250,6 +276,17 @@ gml = { menlei:'婚姻', yongShen:{ liuqin:'妻财', primaryIndex:5, dizhi:'亥'
 rml = applyMenLeiScoring(gml, 0);
 assert(!rml.entries.some(e => e.jieLun.indexOf('兄弟持世') !== -1 && e.jieLun.indexOf('专属计分') !== -1), '策3 婚姻·兄持世同源去重');
 assert(rml.score === -1, '策3 婚姻·用神暗动独立-1(实际' + rml.score + ')');
+
+// 5b. 婚姻：用神临驿马独立判据（不改分，仅语义，依赖 suanYiMa 写入 guaInfo.yiMa）
+gml = { menlei:'婚姻', yongShen:{ liuqin:'妻财', primaryIndex:5, dizhi:'亥' }, yiMa:'亥', shiYaoIndex:3,
+    yaoDetail:[
+        { dizhi:'子', liuqin:'妻财' }, { dizhi:'寅', liuqin:'官鬼' }, { dizhi:'辰', liuqin:'兄弟' },
+        { dizhi:'丑', liuqin:'兄弟' }, { dizhi:'亥', liuqin:'妻财' }, { dizhi:'酉', liuqin:'子孙' }
+    ],
+    jiShenState:null, yuanShenState:null, guaXiang:{} };
+rml = applyMenLeiScoring(gml, 0);
+assert(rml.entries.some(e => e.jieLun.indexOf('用神临驿马') !== -1), '策3 婚姻·用神临驿马独立判据(语义已push)');
+assert(rml.score === 0, '策3 婚姻·临驿马不双计(实际' + rml.score + ')');
 
 // 5. 疾病门：本批全部 score=0（不改变总分，仅语义）
 gml = { menlei:'疾病', yongShen:{ liuqin:'官鬼', primaryIndex:2, dizhi:'午', wangShuaiScore:{ index:1 } }, shiYaoIndex:2,
