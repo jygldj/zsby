@@ -313,6 +313,21 @@ rml = applyMenLeiScoring(gml, 0);
 assert(rml.entries.some(e => e.jieLun.indexOf('用神临驿马') !== -1), '策3 婚姻·用神临驿马独立判据(语义已push)');
 assert(rml.score === 0, '策3 婚姻·临驿马不双计(实际' + rml.score + ')');
 
+// 5a. 婚姻：卦本身六冲→婚散、六合→婚稳（语义显式化，tongyuan 不双计）
+gml = { menlei:'婚姻', yongShen:{ liuqin:'妻财', primaryIndex:5, dizhi:'亥' }, shiYaoIndex:3,
+    yaoDetail:[{dizhi:'子',liuqin:'妻财'},{dizhi:'寅',liuqin:'官鬼'},{dizhi:'辰',liuqin:'兄弟'},{dizhi:'丑',liuqin:'兄弟'},{dizhi:'亥',liuqin:'妻财'},{dizhi:'酉',liuqin:'子孙'}],
+    jiShenState:null, yuanShenState:null, guaXiang:{ liuChong:true } };
+rml = applyMenLeiScoring(gml, 0);
+assert(rml.entries.some(e => e.jieLun.indexOf('六冲卦（婚姻主离散难成）') !== -1), '乙(婚姻) 六冲卦→婚散语义已push');
+assert(rml.score === 0, '乙(婚姻) 六冲卦 tongyuan 不双计(实际' + rml.score + ')');
+
+gml = { menlei:'婚姻', yongShen:{ liuqin:'妻财', primaryIndex:5, dizhi:'亥' }, shiYaoIndex:3,
+    yaoDetail:[{dizhi:'子',liuqin:'妻财'},{dizhi:'寅',liuqin:'官鬼'},{dizhi:'辰',liuqin:'兄弟'},{dizhi:'丑',liuqin:'兄弟'},{dizhi:'亥',liuqin:'妻财'},{dizhi:'酉',liuqin:'子孙'}],
+    jiShenState:null, yuanShenState:null, guaXiang:{ liuHe:true } };
+rml = applyMenLeiScoring(gml, 0);
+assert(rml.entries.some(e => e.jieLun.indexOf('六合卦（婚姻主合和稳固）') !== -1), '乙(婚姻) 六合卦→婚稳语义已push');
+assert(rml.score === 0, '乙(婚姻) 六合卦 tongyuan 不双计(实际' + rml.score + ')');
+
 // 5. 疾病门：本批全部 score=0（不改变总分，仅语义）
 gml = { menlei:'疾病', yongShen:{ liuqin:'官鬼', primaryIndex:2, dizhi:'午', wangShuaiScore:{ index:1 } }, shiYaoIndex:2,
     yaoDetail:[

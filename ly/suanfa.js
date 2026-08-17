@@ -1490,7 +1490,7 @@ function suanDuanGua(guaInfo) {
 const MENLEI_ZHISHI = {
     '婚姻': {
         yongShen: '官鬼',
-        duanFa: ['看财官世应生克', '看父母爻(翁姑)吉凶', '看子孙爻与胎位伏神'],
+        duanFa: ['看财官世应生克', '看父母爻(翁姑)吉凶', '看子孙爻与胎位伏神', '看六合六冲（六合婚稳、六冲婚散）', '看三合局（财官合成局主成）', '看桃花驿马（姻缘发动之机）'],
         yingqi: ['合住待冲', '空破待填实', '官财旺相主吉'],
         chiShi: '财持世吉，兄持世难求'
     },
@@ -1654,6 +1654,12 @@ const MENLEI_RULES = [
     { id:'婚姻-8', menlei:'婚姻', desc:'用神临驿马（缘分或婚事有变动之机）', direction:'中', overlap:'tongyuan', score:0,
       check:(g)=>{ const y=g.yongShen; return !!(y && y.dizhi && g.yiMa && y.dizhi===g.yiMa); },
       reason:'驿马主变动，婚姻门用神临驿马为门类特有语义（suanYiMa 计算），仅显式化不双计' },
+    { id:'婚姻-9', menlei:'婚姻', desc:'六冲卦（婚姻主离散难成）', direction:'凶', overlap:'tongyuan', score:0,
+      check:(g)=>{ return !!(g.guaXiang && g.guaXiang.liuChong); },
+      reason:'六冲主散，婚姻门主离散难成，与通用「六冲−1」同源→去重' },
+    { id:'婚姻-10', menlei:'婚姻', desc:'六合卦（婚姻主合和稳固）', direction:'吉', overlap:'tongyuan', score:0,
+      check:(g)=>{ return !!(g.guaXiang && g.guaXiang.liuHe); },
+      reason:'六合主合和，婚姻门主婚姻稳固，与通用「六合+1」同源→去重' },
 
     // ===== 疾病门（第一批：语义显式化，全部 score=0，方向反转属第二批）=====
     { id:'疾病-1', menlei:'疾病', desc:'子孙制鬼（医药/解忧）', direction:'吉', overlap:'tongyuan', score:0,
