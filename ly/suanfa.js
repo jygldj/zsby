@@ -1276,7 +1276,7 @@ function tuiYingQi(guaInfo, startDate) {
         const unstable = !!(guaXiang && guaXiang.fanYin); // 反吟 → 事多反复，应期或迁延不定
         let weak = false; // 用神真空兼月破 → 应期当远，出月出旬方应
         if (yongShen && typeof yongShen.primaryIndex === 'number') {
-            const ysYao = yaoDetail[yongShen.primaryIndex];
+            const ysYao = yaoDetail[yongShen.primaryIndex - 1];
             if (ysYao && ysYao.kongType === '真空' && ysYao.yuePo) weak = true;
         }
         const flags = { agreement: agreement, divergent: divergent, unstable: unstable, weak: weak };

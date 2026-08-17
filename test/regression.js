@@ -258,6 +258,32 @@ assert(gSelfDir.duanGua.score < 0, '乙 对照·同卦自己病(官鬼为用)仍
 // 代问时疾病门 MENLEI_RULES 语义条跳过（不输出"子孙制鬼/官鬼旺=病重"等自病语义）
 const rFu=applyMenLeiScoring(gFu,0); assert(rFu.entries.length === 0, '乙 代问父病→疾病门语义条已跳过(实际push '+rFu.entries.length+'条)');
 
+// ---- A-1 应期引擎用神索引越界（off-by-one）语义回归 ----
+// 修复前 suanfa.js:1279 为 yaoDetail[yongShen.primaryIndex]（缺-1）→ 误取下一爻；修复后 -1 取正确用神爻。
+// 用真实卦（乾为天）构造，确保 tuiYingQi 产出 yingqi（手写卦 guaXiang 不足会致 yingqi=null）。
+function _a1real(menlei){
+  const g = {
+    yaoDetail: ALL_GUA_DATA.find(x => x.卦名 === '乾为天').爻位.map((w, idx) => {
+      const wx = DIZHI_WUXING[w.地支];
+      let lq = ''; if (wx === '金') lq = '兄弟'; else if (wx === '水') lq = '子孙'; else if (wx === '木') lq = '妻财'; else if (wx === '火') lq = '官鬼'; else lq = '父母';
+      return { dizhi: w.地支, liuqin: lq, isDong: idx === 0, yuePo: false, kongType: 'none', tianGan: w.天干 };
+    }),
+    bianYao: [], guaXiang: {}, shiYaoIndex: 6, yingYaoIndex: 3, fuShenList: [],
+    timeInfo: { yueJian: '午', riChen: '丙午', xunKong: '', nianGanZhi: '丙午' }, userInfo: { gender: '男', jinBing: '否' }, menlei: menlei
+  };
+  applyMenLeiContext(g); xuanYongShen(g, menlei); jiShenChouShen(g); jiSuanYuePo(g); jiSuanRiPoAnDong(g); jiSuanZhenKongJiaKong(g); jiSuanYuanShenKongFu(g, menlei); jiSuanShiYaoZhuangTai(g); suanQuanBuGuaXiang(g);
+  return g;
+}
+const gA1a=_a1real('求财'); const yiA=gA1a.yongShen.primaryIndex;
+gA1a.yaoDetail[yiA-1].kongType='真空'; gA1a.yaoDetail[yiA-1].yuePo=true;  // 用神爻真空兼月破
+tuiYingQi(gA1a, new Date(2026,7,10));
+assert(gA1a.yingqi && gA1a.yingqi.flags && gA1a.yingqi.flags.weak===true, 'A-1 用神真空兼月破→weak=true(越界修复)');
+const gA1b=_a1real('求财'); const yiB=gA1b.yongShen.primaryIndex;
+gA1b.yaoDetail[yiB-1].kongType='none'; gA1b.yaoDetail[yiB-1].yuePo=false;   // 用神正常
+gA1b.yaoDetail[0].kongType='真空'; gA1b.yaoDetail[0].yuePo=true;            // 初爻(非用神)真空兼月破
+tuiYingQi(gA1b, new Date(2026,7,10));
+assert(gA1b.yingqi && gA1b.yingqi.flags && gA1b.yingqi.flags.weak===false, 'A-1 用神正常二爻异常→weak=false(修复后无误伤)');
+
 
 // ---- 策3 四门去重护栏回归断言 ----
 // 1. 求财：财克世独立 +1（火天大有 寅月庚戌日，寅木财克辰土世）

@@ -351,7 +351,23 @@
             benMissingLiuQin: benPan.missingLiuQin,
 
             // 时间信息
-            time: new Date().toLocaleString()
+            time: new Date().toLocaleString(),
+            // B-2：起卦即算完整干支 timeInfo（消摇卦→释卦时间漂移；jiegua.html:1181 优先消费；连带解决 C-1 历史干支丢失）
+            timeInfo: (function () {
+                try {
+                    const _now = new Date();
+                    const _lunar = Solar.fromDate(_now).getLunar();
+                    return {
+                        nianGanZhi: _lunar.getYearInGanZhi(),
+                        yueJian: _lunar.getMonthZhiExact(),
+                        riChen: _lunar.getDayInGanZhiExact(),
+                        xunKong: _lunar.getDayXunKong(),
+                        shiChen: _lunar.getTimeZhi(),
+                        solarTime: _now.toString(),
+                        lunarTime: _lunar.toString()
+                    };
+                } catch (e) { return null; }
+            })()
         };
 
         try {
@@ -400,7 +416,7 @@ try {
                 jinBing: userInfo.jinBing,
                 daiWen: userInfo.daiWen
             },
-            timeInfo: null,
+            timeInfo: guaData.timeInfo,
             result: '',
             modelName: ''
         });
