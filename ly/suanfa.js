@@ -1001,6 +1001,11 @@ function suanFanYinFuYin(guaInfo) {
     guaInfo.guaXiang.fanYin = false;
     guaInfo.guaXiang.fuYin = false;
     if (yaoDetail.length < 6 || bianYao.length < 6) return guaInfo;
+    // ⭐ E-1 守卫：静卦（六爻无动）不存在"动变"过程，本卦==变卦是必然结果，
+    //    不构成伏吟/反吟（伏吟须动爻翻转后变卦仍与本卦重合）。否则会将静卦误标
+    //    fuYin=true，导致 score 误扣、前端错渲染、AI 提示词错传"伏吟"标签。
+    const hasDong = yaoDetail.some(y => y && y.isDong);
+    if (!hasDong) return guaInfo;
     let chongAll = true, sameAll = true;
     for (let i = 0; i < 6; i++) {
         const d1 = yaoDetail[i].dizhi, d2 = bianYao[i].地支;

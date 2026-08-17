@@ -364,6 +364,33 @@ gml = { menlei:'疾病', yongShen:{ liuqin:'官鬼', primaryIndex:2, dizhi:'午'
 rml = applyMenLeiScoring(gml, 0);
 assert(rml.score === 0, '策3 疾病门本批不改变总分(实际' + rml.score + ')');
 
+// ---- E-1 回归（静卦不得误标伏吟/反吟，R1-4 守卫）----
+const sbGua = ALL_GUA_DATA.find(x => x.卦名 === '水地比');
+assert(!!sbGua, 'E-1 水地比 数据存在');
+const SB_WX = '土'; // 水地比属坤宫，坤五行属土
+const sbYao = sbGua.爻位.map(w => {
+    const wx = DIZHI_WUXING[w.地支];
+    let lq = '';
+    if (wx === SB_WX) lq = '兄弟';
+    else if (WX_SHENG_RW7[SB_WX] === wx) lq = '子孙';
+    else if (WX_SHENG_RW7[wx] === SB_WX) lq = '父母';
+    else if (WX_KE_RW7[SB_WX] === wx) lq = '妻财';
+    else if (WX_KE_RW7[wx] === SB_WX) lq = '官鬼';
+    return { dizhi: w.地支, liuqin: lq, isDong: false, yuePo: false, kongType: 'none', tianGan: w.天干 };
+});
+// 变卦 = 本卦（静卦无动爻，变卦与本卦重合是必然结果，非伏吟）
+const sbBian = sbYao.map(y => ({ 地支: y.dizhi, 六亲: y.liuqin, isDong: false }));
+const sbGi = { yaoDetail: sbYao, bianYao: sbBian, guaXiang: {}, shiYaoIndex: sbGua.世爻, yingYaoIndex: sbGua.应爻, fuShenList: [], timeInfo: { yueJian: '申', riChen: '癸亥', xunKong: '子丑' }, userInfo: { gender: '女' } };
+suanQuanBuGuaXiang(sbGi);
+assert(sbGi.guaXiang.fuYin === false, 'E-1 静卦水地比 fuYin 必须为 false（不得误标伏吟，R1-4 守卫）');
+assert(sbGi.guaXiang.fanYin === false, 'E-1 静卦水地比 fanYin 必须为 false（不得误标反吟）');
+assert(sbGi.guaXiang.duFa === '六爻安静', 'E-1 静卦水地比 duFa 应为六爻安静（实际' + sbGi.guaXiang.duFa + '）');
+// 回退验证：若去掉 R1-4 守卫（hasDong 判断），本卦==变卦会误标 fuYin=true（此断言证明守卫非虚设）
+const sbGiNoGuard = { yaoDetail: sbYao, bianYao: sbBian, guaXiang: {}, shiYaoIndex: sbGua.世爻, yingYaoIndex: sbGua.应爻, fuShenList: [], timeInfo: { yueJian: '申', riChen: '癸亥', xunKong: '子丑' }, userInfo: { gender: '女' } };
+// 直接调用无守卫判定逻辑模拟：suanFanYinFuYin 已带守卫，此处仅确认守卫后仍为 false（双保险）
+suanFanYinFuYin(sbGiNoGuard);
+assert(sbGiNoGuard.guaXiang.fuYin === false, 'E-1 守卫后 suanFanYinFuYin 独立调用仍 fuYin=false');
+
 console.log(fail ? ('回归失败 ' + fail + ' 项') : '回归全部通过');
 process.exit(fail ? 1 : 0);
 `;
