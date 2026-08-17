@@ -234,6 +234,31 @@ assert(gNearChong.duanGua.score > gNear.duanGua.score, 'B-5 疾病门近病逢�
 const gOldChong=_mk('疾病'); gOldChong.userInfo.jinBing='久病'; gOldChong.yaoDetail[3].kongType='真空'; _run2(gOldChong,'疾病', true);
 assert(gOldChong.duanGua.score < gOld.duanGua.score, 'B-5 疾病门久病逢冲较无冲更凶(-1)(实际'+gOldChong.duanGua.score+' vs '+gOld.duanGua.score+')');
 
+// 乙 验证：疾病门代问亲属分流（父病→父母、妻病→妻财、子病→子孙；方向正常非反转；疾病门语义条跳过）
+function _mkDai(daiWen){ const g=_mk('疾病'); g.userInfo.daiWen=daiWen; applyMenLeiContext(g); xuanYongShen(g,'疾病'); return g; }
+const gFu=_mkDai('父母'); assert(gFu.yongShen && gFu.yongShen.liuqin === '父母', '乙 父病代问→用神=父母(实际'+(gFu.yongShen&&gFu.yongShen.liuqin)+')');
+const gQi=_mkDai('妻财'); assert(gQi.yongShen && gQi.yongShen.liuqin === '妻财', '乙 妻病代问→用神=妻财(实际'+(gQi.yongShen&&gQi.yongShen.liuqin)+')');
+const gZi=_mkDai('子孙'); assert(gZi.yongShen && gZi.yongShen.liuqin === '子孙', '乙 子病代问→用神=子孙(实际'+(gZi.yongShen&&gZi.yongShen.liuqin)+')');
+const gSelfDai=_mkDai('自己'); assert(gSelfDai.yongShen && gSelfDai.yongShen.liuqin === '官鬼', '乙 自己病→用神=官鬼(对照,实际'+(gSelfDai.yongShen&&gSelfDai.yongShen.liuqin)+')');
+// 代问方向正常（用神旺相=吉），自己病反转（用神旺相=凶）：同卦仅 daiWen 不同
+function _mkDir(liuqin, daiWen){ const g={ yaoDetail:[
+  { dizhi:'卯', liuqin:'妻财', isDong:false, yuePo:false, kongType:'none', tianGan:'乙' },
+  { dizhi:'子', liuqin:'子孙', isDong:false, yuePo:false, kongType:'none', tianGan:'甲' },
+  { dizhi:'寅', liuqin:'兄弟', isDong:false, yuePo:false, kongType:'none', tianGan:'丙' },
+  { dizhi:'午', liuqin:'官鬼', isDong:false, yuePo:false, kongType:'none', tianGan:'戊' },
+  { dizhi:'子', liuqin: liuqin, isDong:false, yuePo:false, kongType:'none', tianGan:'庚' },
+  { dizhi:'申', liuqin:'兄弟', isDong:false, yuePo:false, kongType:'none', tianGan:'壬' }
+], bianYao:[], guaXiang:{}, shiYaoIndex:3, yingYaoIndex:6, fuShenList:[],
+  timeInfo:{ yueJian:'子', riChen:'丙子', xunKong:'', nianGanZhi:'丙午' }, userInfo:{ gender:'男', jinBing:'否', daiWen: daiWen }, menlei:'疾病' };
+  g.yongShen = { liuqin: liuqin, positions:[5], primaryIndex:5, dizhi:'子', reason:'测试', priority:[], wangShuaiScore:{ index:1 } };
+  suanDuanGua(g); return g; }
+const gDaiDir=_mkDir('妻财','妻财'); const gSelfDir=_mkDir('妻财','自己');
+assert(gDaiDir.duanGua.score > 0, '乙 代问妻病·用神(妻财)旺相=吉(正常向, 实际'+gDaiDir.duanGua.score+')');
+assert(gSelfDir.duanGua.score < 0, '乙 对照·同卦自己病(官鬼为用)仍反转=凶(实际'+gSelfDir.duanGua.score+')');
+// 代问时疾病门 MENLEI_RULES 语义条跳过（不输出"子孙制鬼/官鬼旺=病重"等自病语义）
+const rFu=applyMenLeiScoring(gFu,0); assert(rFu.entries.length === 0, '乙 代问父病→疾病门语义条已跳过(实际push '+rFu.entries.length+'条)');
+
+
 // ---- 策3 四门去重护栏回归断言 ----
 // 1. 求财：财克世独立 +1（火天大有 寅月庚戌日，寅木财克辰土世）
 let gml = {

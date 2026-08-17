@@ -688,6 +688,15 @@
                     <option value="否" selected>未定/不详</option>
                 </select>
             </div>
+            <div class="field-group fluid" id="daiWenWrap" style="display:none;">
+                <label for="jgDaiWenSel">代问对象（疾病专用）</label>
+                <select id="jgDaiWenSel" class="q-select">
+                    <option value="自己" selected>自己（亲问自身）</option>
+                    <option value="父母">父母（代问父母病）</option>
+                    <option value="妻财">配偶（代问妻/夫病）</option>
+                    <option value="子孙">子女（代问子/女病）</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -1151,12 +1160,19 @@
                 userInfo.question = jgQuestion.value.trim() || '';
                 const jbSel = document.getElementById('jgJinBingSel');
                 userInfo.jinBing = (jbSel ? jbSel.value : '') || '';
+                const dwSel = document.getElementById('jgDaiWenSel');
+                userInfo.daiWen = (dwSel ? dwSel.value : '') || '自己';
             } else {
                 // 兜底：从 localStorage 读取
                 try {
                     userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
                 } catch(e) {}
             }
+            // rw 乙：代问对象（daiWen）以 localStorage 为准（jiegou.html 录入），页面无此输入时回退
+            try {
+                const _lsU = JSON.parse(localStorage.getItem('userInfo') || '{}');
+                if (!userInfo.daiWen) userInfo.daiWen = _lsU.daiWen || '自己';
+            } catch(e) { if (!userInfo.daiWen) userInfo.daiWen = '自己'; }
             const question = userInfo.question || '';
 
             // 获取选中的模型
@@ -1229,6 +1245,7 @@
                     userBirth: userInfo.birth || '',
                     userQuestion: userInfo.question || '',
                     userJinBing: userInfo.jinBing || '',
+                    userDaiWen: userInfo.daiWen || '自己',
                     // qiGuaTime 不传给 AI（起卦方式对释卦是干扰）
 
                     // ⭐ 世应位置（直接从排盘结果读取，文本化）
@@ -1462,7 +1479,8 @@
                             <div class="user-row">
                                 <span>❓ 所问：${questionText}</span>
                             </div>
-                            ${userInfo.jinBing && (userInfo.jinBing === '近病' || userInfo.jinBing === '久病') ? `<div class="user-row"><span>🏥 病程：${escapeHtml(userInfo.jinBing === '近病' ? '近病（新发/急症）' : '久病（宿疾/慢性）')}</span></div>` : ''}
+                            ${guaData.menlei === '疾病' && userInfo.jinBing && (userInfo.jinBing === '近病' || userInfo.jinBing === '久病') ? `<div class="user-row"><span>🏥 病程：${escapeHtml(userInfo.jinBing === '近病' ? '近病（新发/急症）' : '久病（宿疾/慢性）')}</span></div>` : ''}
+                            ${guaData.menlei === '疾病' && userInfo.daiWen && userInfo.daiWen !== '自己' ? `<div class="user-row"><span>👥 代问对象：${escapeHtml(userInfo.daiWen)}</span></div>` : ''}
                         </div>
                         ${guaInfo.wordNonStandard ? `<div style="margin:12px 0;padding:10px 14px;background:#fdecea;border:1px solid #f5c6cb;border-radius:10px;color:#c0392b;font-size:14px;line-height:1.7;">⚠ <strong>所问之事用词不规范</strong>，系统只能<strong>「通解」</strong>——按六爻常理泛论，不作专门门类断语。请改用《使用指南·用户字典》中的标准事情词。</div>` : ''}
                         <div class="body">${resultHtml}</div>
@@ -1514,7 +1532,8 @@
                     .trim();
                 window.__guaResultText = `【卦象解读 · ${guaData.benGuaName} → ${guaData.bianGuaName}】
 求卦者：${userText}
-🏥 病程：${userInfo.jinBing ? (userInfo.jinBing === '近病' ? '近病（新发/急症）' : '久病（宿疾/慢性）') : '（未填）'}
+${guaData.menlei === '疾病' ? ('🏥 病程：' + (userInfo.jinBing ? (userInfo.jinBing === '近病' ? '近病（新发/急症）' : '久病（宿疾/慢性）') : '（未填）')) : ''}
+${guaData.menlei === '疾病' && userInfo.daiWen && userInfo.daiWen !== '自己' ? ('👥 代问对象：' + userInfo.daiWen) : ''}
 起卦时间：${timeText}
 月建：${timeInfo.yueJian || '未知'}月　日辰：${timeInfo.riChen || '未知'}日　时辰：${timeInfo.shiChen || '未知'}时　旬空：${timeInfo.xunKong || '—'}
 所问之事：${questionText}
@@ -1533,7 +1552,7 @@ ${cleanResult}
                             && h.time === guaData.time && (!h.result || h.result.length === 0)) {
                             h.result = result;
                             h.modelName = modelName;
-                            h.userInfo = { name: userInfo.name, gender: userInfo.gender, birth: userInfo.birth, question: userInfo.question, jinBing: userInfo.jinBing };
+                            h.userInfo = { name: userInfo.name, gender: userInfo.gender, birth: userInfo.birth, question: userInfo.question, jinBing: userInfo.jinBing, daiWen: userInfo.daiWen };
                             h.timeInfo = { solarTime: timeInfo.solarTime, lunarTime: timeInfo.lunarTime, yueJian: timeInfo.yueJian, riChen: timeInfo.riChen, xunKong: timeInfo.xunKong };
                             break;
                         }
@@ -1722,20 +1741,27 @@ ${cleanResult}
             setVal('jgUserBirth', saved.birth);
             setVal('jgUserQuestion', saved.question); // 值载体暂存，下方按门类同步显隐
             setVal('jgJinBingSel', saved.jinBing);
+            setVal('jgDaiWenSel', saved.daiWen || '自己');
 
         // ⭐ 所问之事：下拉↔可写框 视觉合一（与起卦页同逻辑）
         const selEl = document.getElementById('jgQuestionSelect');
         const qEl = document.getElementById('jgUserQuestion');
         const jbWrap = document.getElementById('jinBingWrap');
+        const dwWrap = document.getElementById('daiWenWrap');
+        const syncDiseaseExtras = (isDisease) => {
+            const disp = isDisease ? '' : 'none';
+            if (jbWrap) jbWrap.style.display = disp;
+            if (dwWrap) dwWrap.style.display = disp;
+        };
         if (selEl && qEl) {
             const MENLEI_4 = ['求财', '功名', '婚姻', '疾病'];
             const showSelect = () => { selEl.style.display = ''; qEl.style.display = 'none'; };
             const showInput = () => { selEl.style.display = 'none'; qEl.style.display = 'block'; qEl.focus(); };
             selEl.addEventListener('change', () => {
                 const v = selEl.value;
-                if (v === '__other__') { showInput(); if (MENLEI_4.indexOf(qEl.value.trim()) !== -1) qEl.value = ''; if (jbWrap) jbWrap.style.display = 'none'; }
-                else if (v) { qEl.value = v; showSelect(); if (jbWrap) jbWrap.style.display = (v === '疾病') ? '' : 'none'; }
-                else { qEl.value = ''; showSelect(); if (jbWrap) jbWrap.style.display = 'none'; }
+                if (v === '__other__') { showInput(); if (MENLEI_4.indexOf(qEl.value.trim()) !== -1) qEl.value = ''; syncDiseaseExtras(false); }
+                else if (v) { qEl.value = v; showSelect(); syncDiseaseExtras(v === '疾病'); }
+                else { qEl.value = ''; showSelect(); syncDiseaseExtras(false); }
             });
             qEl.addEventListener('input', () => {
                 const v = qEl.value.trim();
@@ -1743,9 +1769,9 @@ ${cleanResult}
             });
             // 依据当前值初始化可见控件（固化词→下拉；其余→可写框）
             const cur = (qEl.value || '').trim();
-            if (MENLEI_4.indexOf(cur) !== -1) { selEl.value = cur; showSelect(); if (jbWrap) jbWrap.style.display = (cur === '疾病') ? '' : 'none'; }
-            else if (cur) { selEl.value = '__other__'; showInput(); if (jbWrap) jbWrap.style.display = 'none'; }
-            else { selEl.value = ''; showSelect(); if (jbWrap) jbWrap.style.display = 'none'; }
+            if (MENLEI_4.indexOf(cur) !== -1) { selEl.value = cur; showSelect(); syncDiseaseExtras(cur === '疾病'); }
+            else if (cur) { selEl.value = '__other__'; showInput(); syncDiseaseExtras(false); }
+            else { selEl.value = ''; showSelect(); syncDiseaseExtras(false); }
         }
         })();
 

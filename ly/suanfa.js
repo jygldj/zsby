@@ -705,6 +705,13 @@ function jiWangShuaiScore(yao, guaInfo) {
 function xuanYongShen(guaInfo, questionType) {
     let yongShenLiuqin = YONG_SHEN_MAP_RW8[questionType] || null;
     let yongShenNote = '';
+    // 乙·疾病门代问亲属分流（第三批·三类）：父病→父母、妻病→妻财、子病→子孙为用；兄弟留第四批
+    if (questionType === '疾病') {
+        const daiWen = (guaInfo.userInfo && guaInfo.userInfo.daiWen) || '自己';
+        if (daiWen === '父母') { yongShenLiuqin = '父母'; yongShenNote = '（代问父母病，取父母为用）'; }
+        else if (daiWen === '妻财') { yongShenLiuqin = '妻财'; yongShenNote = '（代问配偶病，取妻财为用）'; }
+        else if (daiWen === '子孙') { yongShenLiuqin = '子孙'; yongShenNote = '（代问子女病，取子孙为用）'; }
+    }
     // R0-3：婚姻/感情按求卦者性别分流（《增删卜易·婚姻章》：男占以妻财为用，女占以官鬼为用）
     if ((questionType === '婚姻' || questionType === '感情') && yongShenLiuqin) {
         const gender = (guaInfo.userInfo && guaInfo.userInfo.gender) || '';
@@ -1316,6 +1323,8 @@ function suanDuanGua(guaInfo) {
     const riChen = timeInfo.riChen || '';
     const riZhi = riChen.length >= 2 ? riChen.charAt(1) : '';
     const menlei = guaInfo.menlei || '';
+    const daiWen = (guaInfo.userInfo && guaInfo.userInfo.daiWen) || '自己';
+    const selfIll = (menlei === '疾病' && daiWen === '自己');
     const yiMa = suanYiMa(timeInfo);
     guaInfo.yiMa = yiMa;
     const jb = (guaInfo.userInfo && guaInfo.userInfo.jinBing) || '否';
@@ -1345,7 +1354,7 @@ function suanDuanGua(guaInfo) {
         add('察旺衰', '用神' + yongYao.dizhi + ' ' + wangShuai + '(评分' + sc.score + ')', sc.detail || '月日生克综合');
         // P1 权重（用神为尊）：用神本体一等 ±2，月破/真空重罚
         const base = (sc.score > 0 ? 2 : (sc.score < 0 ? -2 : 0));
-        score += (menlei === '疾病') ? -base : base;
+        score += (selfIll) ? -base : base;
         if (yongYao.yuePo) { add('察旺衰', '用神月破', '月建' + yueJian + '冲' + yongYao.dizhi + '，根枯难用'); if (menlei === '疾病' && (guaInfo.userInfo && guaInfo.userInfo.jinBing === '近病')) score += 2; else score -= 2; }
         if (menlei === '疾病' && jb === '近病') {
             if (yongYao.kongType !== 'none') { add('察旺衰', '用神旬空（近病）', '近病逢空即愈，不药而痊'); score += 1; }
@@ -1405,8 +1414,8 @@ function suanDuanGua(guaInfo) {
     if (guaInfo.jiShenState && guaInfo.jiShenState.liuqin) {
         const js = guaInfo.jiShenState;
         add('看忌仇元神', '忌神' + js.liuqin + (js.positions.length ? ('在第' + js.positions.join('、') + '爻') : ''), js.duanYu || '');
-        if (js.wangShuaiScore && js.wangShuaiScore.index > 0) { add('看忌仇元神', '忌神有力', '忌神旺相克用，防其害'); score += (menlei === '疾病' ? 1 : -1); }
-        else { add('看忌仇元神', '忌神无力', '忌神休囚，克用之力有限'); score += (menlei === '疾病' ? -1 : 1); }
+        if (js.wangShuaiScore && js.wangShuaiScore.index > 0) { add('看忌仇元神', '忌神有力', '忌神旺相克用，防其害'); score += (selfIll ? 1 : -1); }
+        else { add('看忌仇元神', '忌神无力', '忌神休囚，克用之力有限'); score += (selfIll ? -1 : 1); }
     } else {
         add('看忌仇元神', '忌神状态', '未构成明显忌神或数据缺失');
     }
@@ -1415,7 +1424,7 @@ function suanDuanGua(guaInfo) {
         if (cs.wangShuaiScore && cs.wangShuaiScore.index > 0) {
             score--;
             let note = '仇神（' + cs.liuqin + '）旺相，事有阻滞';
-            if (menlei === '疾病')
+            if (selfIll)
                 note = '仇神（妻财）旺相，于疾病门中为双刃之象—既助药力（生子孙），亦耗元气（克父母原神），仍有牵制之虑';
             add('看忌仇元神', note, '仇神旺相克原神，防其牵制');
         } else {
@@ -1426,14 +1435,14 @@ function suanDuanGua(guaInfo) {
         const ys = guaInfo.yuanShenState;
         const ysState = ys.isFuCang ? '伏藏' : (ys.isKong ? '旬空' : '得力');
         add('看忌仇元神', '原神' + (ys.liuqin || '') + ysState, ys.duanYu || '');
-        if (ys.isKong || ys.isFuCang) score += (menlei === '疾病' ? 1 : -1);
-        else score += (menlei === '疾病' ? -1 : 1);
+        if (ys.isKong || ys.isFuCang) score += (selfIll ? 1 : -1);
+        else score += (selfIll ? -1 : 1);
     } else {
         add('看忌仇元神', '原神状态', '未计算或数据缺失');
     }
 
     // 步6 察卦象
-    if (guaXiang.liuChong) { add('察卦象', '六冲卦', '六冲主散，占久远事不利，主快主凶'); score += (menlei === '疾病' ? ((jb === '近病') ? 1 : -1) : -1); }
+    if (guaXiang.liuChong) { add('察卦象', '六冲卦', '六冲主散，占久远事不利，主快主凶'); score += (selfIll ? ((jb === '近病') ? 1 : -1) : -1); }
     if (guaXiang.liuHe) { add('察卦象', '六合卦', '六合主合和，占事多顺'); score++; }
     if (guaXiang.fanYin) { add('察卦象', '反吟', '卦反吟，事多反复，主劳而无功'); score--; }
     if (guaXiang.fuYin) { add('察卦象', '伏吟', '卦伏吟，事主呻吟迟滞，进退两难'); score--; }
@@ -1689,7 +1698,9 @@ function applyMenLeiScoring(guaInfo, score) {
     const entries = [];
     const menlei = guaInfo.menlei;
     if (!menlei) return { score: score, entries: entries };
-    const rules = MENLEI_RULES.filter(r => r.menlei === menlei);
+    const daiWen = (guaInfo.userInfo && guaInfo.userInfo.daiWen) || '自己';
+    const selfIll = (menlei === '疾病' && daiWen === '自己');
+    const rules = MENLEI_RULES.filter(r => r.menlei === menlei && (menlei !== '疾病' || selfIll));
     for (const r of rules) {
         let triggered = false;
         try { triggered = r.check(guaInfo); } catch (e) { triggered = false; }
@@ -1749,6 +1760,12 @@ function inferMenLei(question) {
 function getYongShenByMenLei(guaInfo, menlei) {
     const entry = MENLEI_ZHISHI[menlei];
     if (!entry) return QUESTION_TO_YONGSHEN[menlei] || null;
+    if (menlei === '疾病') {
+        const daiWen = (guaInfo.userInfo && guaInfo.userInfo.daiWen) || '自己';
+        if (daiWen === '父母') return '父母';
+        if (daiWen === '妻财') return '妻财';
+        if (daiWen === '子孙') return '子孙';
+    }
     if (menlei === '婚姻' || menlei === '感情') {
         const gender = (guaInfo.userInfo && guaInfo.userInfo.gender) || '';
         if (gender.indexOf('男') !== -1) return '妻财';

@@ -368,7 +368,8 @@ const userInfo = {
     gender: document.getElementById('userGender').value || '男',
     birth: document.getElementById('userBirth').value || '',
     question: document.getElementById('userQuestion').value || '',
-    jinBing: (document.getElementById('jinBingSel') ? document.getElementById('jinBingSel').value : '') || ''
+    jinBing: (document.getElementById('jinBingSel') ? document.getElementById('jinBingSel').value : '') || '',
+    daiWen: (document.getElementById('daiWenSel') ? document.getElementById('daiWenSel').value : '') || '自己'
 };
 
 try {
@@ -396,7 +397,8 @@ try {
                 gender: userInfo.gender, 
                 birth: userInfo.birth, 
                 question: userInfo.question,
-                jinBing: userInfo.jinBing
+                jinBing: userInfo.jinBing,
+                daiWen: userInfo.daiWen
             },
             timeInfo: null,
             result: '',

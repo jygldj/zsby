@@ -12,7 +12,8 @@ async function callQwen(guaInfo, modelKey) {
         gender: guaInfo.userGender || '未填',
         birth: guaInfo.userBirth || '',
         question: guaInfo.userQuestion || '此事',
-        jinBing: guaInfo.userJinBing || ''
+        jinBing: guaInfo.userJinBing || '',
+        daiWen: guaInfo.userDaiWen || '自己'
     };
 
     const timeInfo = guaInfo.timeInfo || {};
@@ -125,6 +126,12 @@ async function callQwen(guaInfo, modelKey) {
 - 久病：多属虚损、正气已亏，逢空亡/六冲多凶（顽疾难起），释文须明确"久病"字样。
 - 断语须与【断卦依据链】中近/久病标注一致，冲突以标注为准。
 - ⚠ 严禁使用"若为新病则近期可愈"等条件套语。病程已知，须直接给出针对性的断语。
+【疾病门·代问分流】须依【代问对象】字段确定用神与断语方向：
+- 代问对象为"自己"：占自身病，用神取官鬼；疾病门凶吉反转——用神旺相反为凶，子孙制鬼为吉。
+- 代问对象为"父母"：占父母病，用神取父母爻；按常理（非反转）断：用神旺相为吉，忌神发动为凶。
+- 代问对象为"妻财"：占配偶病，用神取妻财爻；按常理断。
+- 代问对象为"子孙"：占子女病，用神取子孙爻；按常理断。
+- ⚠ 代问（非自己）时严禁套用"自身病反转"逻辑；释文须点明代问何人。
 【专业详解六步】用神取舍／月建影响／日辰影响／世应关系／动爻之变／综合断语与应期（应期引用候选日期）。`;
 
     const userPrompt = `【固定首句】
@@ -132,6 +139,7 @@ ${fixedOpening}
 
 【所问之事】${userInfo.question || '（未提供）'}
 【病程】${userInfo.jinBing || '（非疾病门类或未填）'}
+【代问对象】${userInfo.daiWen || '自己'}${(userInfo.daiWen && userInfo.daiWen !== '自己') ? '（按常理断，不套用自身病反转）' : '（亲问自身，用神取官鬼，疾病门凶吉反转）'}
 
 【卦象数据（已排定，请直接使用，勿自行推演）】
 本卦：${guaInfo.benGua}（${guaInfo.benPalace || ''}）

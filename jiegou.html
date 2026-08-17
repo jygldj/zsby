@@ -65,6 +65,15 @@
                     <option value="否" selected>未定/不详</option>
                 </select>
             </div>
+            <div class="field-group fluid" id="daiWenWrap" style="display:none;">
+                <label for="daiWenSel">代问对象（疾病专用）</label>
+                <select id="daiWenSel" class="q-select">
+                    <option value="自己" selected>自己（亲问自身）</option>
+                    <option value="父母">父母（代问父母病）</option>
+                    <option value="妻财">配偶（代问妻/夫病）</option>
+                    <option value="子孙">子女（代问子/女病）</option>
+                </select>
+            </div>
         </div>
     </div>
 
@@ -421,21 +430,28 @@
     function showInput() { sel.style.display = 'none'; qInput.style.display = 'block'; qInput.focus(); }
 
     // 下拉选择 → 联动
+    const jbWrap = document.getElementById('jinBingWrap');
+    const dwWrap = document.getElementById('daiWenWrap');
+    function syncDiseaseExtras(isDisease) {
+        const disp = isDisease ? '' : 'none';
+        if (jbWrap) jbWrap.style.display = disp;
+        if (dwWrap) dwWrap.style.display = disp;
+    }
+
     sel.addEventListener('change', function () {
         const v = sel.value;
-        const jbWrap = document.getElementById('jinBingWrap');
         if (v === '__other__') {
             showInput();
             if (MENLEI_4.indexOf(qInput.value.trim()) !== -1) qInput.value = ''; // 清空误带的固化词
-            if (jbWrap) jbWrap.style.display = 'none';
+            syncDiseaseExtras(false);
         } else if (v) {
             qInput.value = v; // 固化项写入值载体
             showSelect();
-            if (jbWrap) jbWrap.style.display = (v === '疾病') ? '' : 'none';
+            syncDiseaseExtras(v === '疾病');
         } else {
             qInput.value = ''; // 占位项「选择事项…」
             showSelect();
-            if (jbWrap) jbWrap.style.display = 'none';
+            syncDiseaseExtras(false);
         }
     });
 
@@ -452,10 +468,9 @@
     // 初始化：若已有值（tstj 跳转 / 回退 / 复填），同步控件可见状态
     function initFromValue() {
         const cur = (qInput.value || '').trim();
-        const jbWrap = document.getElementById('jinBingWrap');
-        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; showSelect(); if (jbWrap) jbWrap.style.display = (cur === '疾病') ? '' : 'none'; }
-        else if (cur) { sel.value = '__other__'; showInput(); if (jbWrap) jbWrap.style.display = 'none'; }
-        else { sel.value = ''; showSelect(); if (jbWrap) jbWrap.style.display = 'none'; }
+        if (MENLEI_4.indexOf(cur) !== -1) { sel.value = cur; showSelect(); syncDiseaseExtras(cur === '疾病'); }
+        else if (cur) { sel.value = '__other__'; showInput(); syncDiseaseExtras(false); }
+        else { sel.value = ''; showSelect(); syncDiseaseExtras(false); }
     }
     initFromValue();
 })();
