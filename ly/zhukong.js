@@ -363,7 +363,12 @@
                         riChen: _lunar.getDayInGanZhiExact(),
                         xunKong: _lunar.getDayXunKong(),
                         shiChen: _lunar.getTimeZhi(),
-                        solarTime: _now.toString(),
+                        solarTime: (function () {
+                            const _pad = n => n < 10 ? '0' + n : '' + n;
+                            const _weeks = ['日','一','二','三','四','五','六'];
+                            return _now.getFullYear() + '年' + _pad(_now.getMonth() + 1) + '月' + _pad(_now.getDate())
+                                 + '日 星期' + _weeks[_now.getDay()] + ' ' + _pad(_now.getHours()) + ':' + _pad(_now.getMinutes());
+                        })(),
                         lunarTime: _lunar.toString()
                     };
                 } catch (e) { return null; }

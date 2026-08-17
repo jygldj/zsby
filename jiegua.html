@@ -936,7 +936,18 @@
             try {
                 const manual = (guaData && guaData.timeInfo && guaData.timeInfo.riChen) ? guaData.timeInfo : null;
                 const timeInfo = manual || getTimeInfo();
-                document.getElementById('displaySolarTime').textContent = timeInfo.solarTime || '—';
+                // 兼容 localStorage 旧记录：若 solarTime 仍为英文 toString() 产物（GMT/周名开头），现场转本地化
+                let _solarTime = timeInfo.solarTime || '—';
+                if (_solarTime !== '—' && /GMT|^(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\s/.test(_solarTime)) {
+                    const _d = new Date(_solarTime);
+                    if (!isNaN(_d.getTime())) {
+                        const _pad = n => n < 10 ? '0' + n : '' + n;
+                        const _weeks = ['日','一','二','三','四','五','六'];
+                        _solarTime = _d.getFullYear() + '年' + _pad(_d.getMonth() + 1) + '月' + _pad(_d.getDate())
+                                  + '日 星期' + _weeks[_d.getDay()] + ' ' + _pad(_d.getHours()) + ':' + _pad(_d.getMinutes());
+                    }
+                }
+                document.getElementById('displaySolarTime').textContent = _solarTime;
                 document.getElementById('displayLunarTime').textContent = timeInfo.lunarTime || '—';
                 document.getElementById('displayYueJian').textContent = (timeInfo.yueJian || '未知') + '月';
                 document.getElementById('displayRiChen').textContent = (timeInfo.riChen || '未知') + '日';
