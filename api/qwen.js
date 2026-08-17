@@ -5,6 +5,12 @@
 
 // 支持双模型：callQwen(guaInfo, 'qwen') 主力；callQwen(guaInfo, 'qwen2') 备选
 // 密钥已移入服务端（functions/api/ai.js 代理），本文件不再包含任何密钥
+
+// D-1 收敛：首句模板单源（前端 jiegua.html 的 expectedOpen 亦复用，消除与首句定义的重复漂移）
+function buildFixedOpening(question, benGua, bianGua) {
+    return `君有疑惑，询问${question || '此事'}，求得《${benGua}》之《${bianGua}》，今老夫为你释疑：`;
+}
+
 async function callQwen(guaInfo, modelKey) {
 
     const userInfo = {
@@ -22,7 +28,7 @@ async function callQwen(guaInfo, modelKey) {
                   : userInfo.gender === '男' ? '先生'
                   : '道友';
 
-    const fixedOpening = `君有疑惑，询问${userInfo.question}，求得《${guaInfo.benGua}》之《${guaInfo.bianGua}》，今老夫为你释疑：`;
+    const fixedOpening = buildFixedOpening(userInfo.question, guaInfo.benGua, guaInfo.bianGua);
 
     function yaoDesc(y) {
         let desc = `${y.dizhi}${y.liuqin}`;

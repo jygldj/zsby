@@ -527,7 +527,8 @@ function jiSuanZhenKongJiaKong(guaInfo) {
         const yueSheng = !!(yueWx && WX_SHENG_RW7[yueWx] === yaoWx);
         const riSheng  = !!(riWx  && WX_SHENG_RW7[riWx]  === yaoWx);
         const yueKe    = !!(yueWx && WX_KE_RW7[yueWx] === yaoWx);
-        if (yueKe && !yueSheng && !riSheng) {
+        const dongSheng = yaoDetail.some(o => o.isDong && DIZHI_WUXING[o.dizhi] && WX_SHENG_RW7[DIZHI_WUXING[o.dizhi]] === yaoWx);
+        if (yueKe && !yueSheng && !riSheng && !dongSheng) {
             f.kongType = '真空';
             f.kongDetail = '伏神旬空且月克无生，如石沉大海，终不可得';
         } else {

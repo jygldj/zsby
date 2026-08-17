@@ -254,7 +254,7 @@
             // 伏神映射
             if (Array.isArray(gd.benFuShen)) {
                 guaInfo.fuShenList = gd.benFuShen.map(function (f) {
-                    return { liuqin: f.fuShenLiuQin, dizhi: f.fuShenDizhi, yaoWei: f.fuShenYaoWei, isKong: false };
+                    return { 六亲: f.fuShenLiuQin, 地支: f.fuShenDizhi, 伏神爻位: f.fuShenYaoWei, isKong: false };
                 });
             }
 

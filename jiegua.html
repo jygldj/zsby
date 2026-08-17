@@ -959,23 +959,8 @@
         function inferQuestionType(question) {
             if (!question) return null;
             const q = question.toLowerCase();
-            const map = [
-                ['婚姻','婚姻'],['嫁','婚姻'],['娶','婚姻'],
-                ['上学','学业'],['考试','学业'],['进修','学业'],
-                ['功名','功名'],['仕途','功名'],['升职','功名'],['求职','功名'],['前程','功名'],
-                ['财运','求财'],['生意','求财'],['股票','求财'],['投资','求财'],['买卖','求财'],['交易','求财'],['开张','求财'],
-                ['疾病','疾病'],['康复','疾病'],['求医','疾病'],['治病','疾病'],
-                ['出行','出行'],['旅游','出行'],['出差','出行'],
-                ['归期','行人归期'],
-                ['诉讼','诉讼'],['官司','诉讼'],
-                ['失物','失物'],['遗失','失物'],['丢失','失物'],
-                ['怀孕','子嗣胎孕'],['求子','子嗣胎孕'],['生子','子嗣胎孕'],['得子','子嗣胎孕'],['子女','子嗣胎孕'],['子孙','子嗣胎孕'],
-                ['住宅','家宅迁移'],['搬家','家宅迁移'],['买房','家宅迁移'],['建房','家宅迁移'],['风水','家宅迁移'],['装修','家宅迁移'],
-                ['终身','终身财福'],['命运','终身财福'],['财福','终身财福'],
-                ['防灾','趋避防灾'],['避祸','趋避防灾'],['避灾','趋避防灾'],['平安','趋避防灾'],['破灾','趋避防灾']
-            ];
-            for (const pair of map) { if (q.indexOf(pair[0]) !== -1) return pair[1]; }
-            return null;
+            // C-3 收敛：复用 suanfa.js 全局 inferMenLei（单源），消除与 MENLEI_KEYWORDS 的重复关键词表
+            return (typeof inferMenLei === 'function') ? inferMenLei(question) : null;
         }
 
         function buildMarksHtml(guaInfo) {
@@ -1416,7 +1401,9 @@
                 const modelName = usedModel === 'qwen' ? '千问旗舰' : '千问备选';
 
                 // 首句校正：无论 AI 返回何种前缀（含偶发"野鹤老人曰"套语），一律强制以固定首句开头
-                const expectedOpen = `君有疑惑，询问${userInfo.question || '此事'}，求得《${guaData.benGuaName}》之《${guaData.bianGuaName}》，今老夫为你释疑：`;
+                const expectedOpen = (typeof buildFixedOpening === 'function')
+                    ? buildFixedOpening(userInfo.question || '此事', guaData.benGuaName, guaData.bianGuaName)
+                    : `君有疑惑，询问${userInfo.question || '此事'}，求得《${guaData.benGuaName}》之《${guaData.bianGuaName}}，今老夫为你释疑：`;
                 if (!result.startsWith(expectedOpen)) {
                     const m = result.match(/今老夫为你释疑[:：]/);
                     result = m ? (expectedOpen + result.slice(m.index + m[0].length).trim())

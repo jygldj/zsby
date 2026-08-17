@@ -11,12 +11,30 @@
 //   AI_GATE_TOKEN = 可选；配置后请求需携带 x-ai-token 头，防未授权脚本盗用额度
 // GET /api/ai 可作健康检查。
 
-const CORS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, x-ai-token',
-  'Access-Control-Max-Age': '86400',
-};
+// CORS 响应头：Access-Control-Allow-Origin 仅对白名单来源动态回显，
+// 不再固定 '*'。非白名单来源回显 'null'，浏览器将因源不匹配而拦截跨站读取。
+// （应用层来源拦截见 isAllowedOrigin；此处收紧响应头，消除预检期的信息泄露面。）
+function buildCors(request) {
+  let allowOrigin = 'null';
+  if (request) {
+    const match = (s) => s && ALLOWED_ORIGINS.some((o) => s === o || s.startsWith(o + ':') || s.startsWith(o + '/'));
+    const origin = request.headers.get('Origin');
+    if (match(origin)) {
+      allowOrigin = origin;
+    } else {
+      const referer = request.headers.get('Referer');
+      if (referer) {
+        try { const key = new URL(referer).origin; if (match(key)) allowOrigin = key; } catch (e) { /* 忽略非法 Referer */ }
+      }
+    }
+  }
+  return {
+    'Access-Control-Allow-Origin': allowOrigin,
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, x-ai-token',
+    'Access-Control-Max-Age': '86400',
+  };
+}
 
 // 来源白名单：浏览器跨站请求按 Origin/Referer 校验，未命中返回 403；无来源头的直连请求（curl/同源）放行
 const ALLOWED_ORIGINS = [
@@ -35,10 +53,10 @@ const MODELS = {
   qwen2: 'qwen3.7-flash',
 };
 
-function json(body, status, extra) {
+function json(body, status, request, extra) {
   const headers = Object.assign(
     { 'Content-Type': 'application/json; charset=utf-8' },
-    CORS,
+    buildCors(request),
     extra || {}
   );
   return new Response(JSON.stringify(body), { status: status || 200, headers });
@@ -79,12 +97,16 @@ function isAllowedOrigin(request) {
   return true;
 }
 
-export async function onRequestOptions() {
-  return new Response(null, { headers: CORS });
+export async function onRequestOptions(request) {
+  // 预检也必须先过来源校验：非白名单来源直接 403，不再回显 '*'
+  if (!isAllowedOrigin(request)) {
+    return new Response(null, { status: 403, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
+  }
+  return new Response(null, { headers: buildCors(request) });
 }
 
 export async function onRequestGet() {
-  return json({ ok: true, service: 'daoxuan-ai', ts: Date.now() });
+  return json({ ok: true, service: 'daoxuan-ai', ts: Date.now() }, 200, null);
 }
 
 export async function onRequestPost(context) {
@@ -94,7 +116,7 @@ export async function onRequestPost(context) {
 async function handle(request, env) {
   // 来源校验：第三方站点（含其他域名下嵌入的前端）一律拒绝
   if (!isAllowedOrigin(request)) {
-    return json({ error: '禁止的请求来源' }, 403);
+    return json({ error: '禁止的请求来源' }, 403, request);
   }
 
   // 可选令牌防护（纵深防御）：配置 AI_GATE_TOKEN 后需请求头携带 x-ai-token
@@ -110,19 +132,19 @@ async function handle(request, env) {
   try {
     body = await request.json();
   } catch (e) {
-    return json({ error: '请求体不是合法 JSON' }, 400);
+    return json({ error: '请求体不是合法 JSON' }, 400, request);
   }
 
   const modelKey = body.modelKey === 'qwen2' ? 'qwen2' : 'qwen';
   const systemPrompt = (body.systemPrompt || '').trim();
   const userPrompt = (body.userPrompt || '').trim();
   if (!systemPrompt || !userPrompt) {
-    return json({ error: '缺少 systemPrompt 或 userPrompt' }, 400);
+    return json({ error: '缺少 systemPrompt 或 userPrompt' }, 400, request);
   }
 
   const apiKey = modelKey === 'qwen2' ? env.QWEN2_API_KEY : env.QWEN_API_KEY;
   if (!apiKey) {
-    return json({ error: '服务端未配置 ' + (modelKey === 'qwen2' ? 'QWEN2_API_KEY' : 'QWEN_API_KEY') + ' 环境变量' }, 500);
+    return json({ error: '服务端未配置 ' + (modelKey === 'qwen2' ? 'QWEN2_API_KEY' : 'QWEN_API_KEY') + ' 环境变量' }, 500, request);
   }
 
   const model = MODELS[modelKey];
@@ -151,7 +173,7 @@ async function handle(request, env) {
         const err = await upstream.json();
         if (err && err.error && err.error.message) message = err.error.message;
       } catch (e) { /* 忽略非 JSON 响应 */ }
-      return json({ error: friendlyError(message, upstream.status) }, 502);
+      return json({ error: friendlyError(message, upstream.status) }, 502, request);
     }
 
     const data = await upstream.json();
@@ -159,11 +181,11 @@ async function handle(request, env) {
       ? data.choices[0].message.content
       : '';
     if (!content) {
-      return json({ error: '上游返回为空' }, 502);
+      return json({ error: '上游返回为空' }, 502, request);
     }
-    return json({ content: content });
+    return json({ content: content }, 200, request);
 
   } catch (e) {
-    return json({ error: '释卦服务异常：' + e.message }, 500);
+    return json({ error: '释卦服务异常：' + e.message }, 500, request);
   }
 }
