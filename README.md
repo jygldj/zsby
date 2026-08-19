@@ -151,6 +151,7 @@ zsby/                                # 仓库根（Cloudflare Pages 项目根）
 本项目基于《增删卜易》古法，由**道玄**主持设计，**WorkBuddy、DeepSeek、元宝、千问办公**等 AI 协助出品。
 
 - **原始仓库**：https://github.com/jygldj/zsby
+- **作者联系**：7493326@qq.com / gswsf@163.com
 - **同源小说**：《三国续·数字卜易传》<https://sgxxs.pages.dev/> —— 本系统之诞生实录，二次开发**必须保留此链接**。
 - **许可证**：依据 [GNU Affero General Public License v3.0](LICENSE)（**AGPL-3.0**）及"附加商业限制条款"发布。
 - **开源学习，闭源商业**：任何人可学习、研究、内部使用本代码；但若将本软件或其衍生作品用于**直接盈利**（收费咨询、SaaS 服务、嵌入商业产品等），须事先获得作者**书面授权**。
