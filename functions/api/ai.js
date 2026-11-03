@@ -1,13 +1,20 @@
 // 增删卜易 · AI 释卦代理（Cloudflare Pages Functions）
 // 前端 POST { modelKey, systemPrompt, userPrompt } 到 /api/ai，
-// 本函数以服务端环境变量中的密钥调用阿里云百炼，返回解读文本；密钥永不进入前端。
+// 本函数通过 Workers AI 绑定（env.AI）调用大模型，返回解读文本；密钥永不进入前端。
 //
 // 请求体：{ "modelKey": "qwen" | "qwen2", "systemPrompt": "...", "userPrompt": "..." }
 // 返回：{ "content": "AI 解读文本" } 或 { "error": "错误说明" }
 //
-// 环境变量（Cloudflare 控制台配置，改后需重新部署生效）：
-//   QWEN_API_KEY  = 主力（qwen-max）的 apiKey
-//   QWEN2_API_KEY = 备选（qwen3.7-flash）的 apiKey
+// 模型配置（2026-11-03 更新：原两个 Qwen 免费额度已用尽，统一换成 Cloudflare Workers AI 免费档）
+//   两个模型均走 Workers AI 绑定 env.AI.run()，每天共 1 万 Neurons 免费，无需任何 API 密钥。
+//   modelKey = "qwen"  → 主模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
+//                        中文（含半白话/文言）理解最强，推理模型；免费档中文主力。
+//   modelKey = "qwen2" → 次模型：Llama-3.1-8B（@cf/meta/llama-3.1-8b-instruct）
+//                        免费档中除 GLM 外中文半白话理解可用之选，作为主模型冗余备援。
+//                        注：Llama 文本模型走 prompt 字段（非 messages），代码已按 input 格式区分。
+//
+// 环境变量 / 绑定（Cloudflare 控制台 → dxzsby 项目 → 设置 → 绑定，改后需重新部署生效）：
+//   AI            = Workers AI 绑定（设置 → 绑定 → 添加 → Workers AI，变量名填 AI）；两模型共用，无需密钥
 //   AI_GATE_TOKEN = 可选；配置后请求需携带 x-ai-token 头，防未授权脚本盗用额度
 // GET /api/ai 可作健康检查。
 
@@ -45,12 +52,25 @@ const ALLOWED_ORIGINS = [
   'http://127.0.0.1',
 ];
 
-const BASE_URL = 'https://dashscope.aliyuncs.com/compatible-mode/v1';
-
-// 模型名映射（只改这里即可切换模型，前端无需变动）
-const MODELS = {
-  qwen: 'qwen-max',
-  qwen2: 'qwen3.7-flash',
+// 模型提供方配置：只改这里即可切换模型，前端无需变动
+//   kind 固定为 'cf-ai'（Workers AI 绑定）
+//   input = 'messages' → 传入 { messages:[{role,content}] }（GLM 等对话模型）
+//   input = 'prompt'   → 传入 { prompt: "..." }（Llama 等文本模型，需把 system+user 合并为一段）
+const PROVIDERS = {
+  // 主模型：Cloudflare Workers AI 免费档 GLM-4.7-Flash（中文/半白话理解最强）
+  qwen: {
+    kind: 'cf-ai',
+    model: '@cf/zai-org/glm-4.7-flash',
+    input: 'messages',
+    label: 'GLM-4.7-Flash（Cloudflare Workers AI 免费档·主）',
+  },
+  // 次模型：Cloudflare Workers AI 免费档 Llama-3.1-8B（中文半白话备援）
+  qwen2: {
+    kind: 'cf-ai',
+    model: '@cf/meta/llama-3.1-8b-instruct',
+    input: 'prompt',
+    label: 'Llama-3.1-8B（Cloudflare Workers AI 免费档·备援）',
+  },
 };
 
 function json(body, status, request, extra) {
@@ -62,20 +82,13 @@ function json(body, status, request, extra) {
   return new Response(JSON.stringify(body), { status: status || 200, headers });
 }
 
-// 上游错误如实呈现（原文 + HTTP 状态码），仅对可明确判定的类别附客观说明，不臆测原因
-function friendlyError(message, status) {
-  const m = (message || '').toString().trim();
-  const fact = '上游返回（HTTP ' + (status || '?') + '）：' + (m || '无错误详情');
-  if (status === 401 || /invalidapikey|unauthorized|invalid api key|access denied/i.test(m)) {
-    return fact + ' —— API Key 认证失败，请核对环境变量 QWEN_API_KEY / QWEN2_API_KEY';
-  }
-  if (/model.*(not.*exist|not found|not support)|invalid.*model|modelname/i.test(m)) {
-    return fact + ' —— 模型名称无效或不存在，请核对百炼控制台实际模型名';
-  }
-  if (status === 429 || /throttl|rate.?limit|too many requests|slow down/i.test(m)) {
-    return fact + ' —— 触发限流，请稍后重试';
-  }
-  return fact;
+// 从 Workers AI 返回（{response} 或 {choices:[{message:{content}}]}）中统一抽取正文
+function extractContent(r) {
+  if (!r || typeof r !== 'object') return '';
+  if (typeof r.response === 'string' && r.response) return r.response;
+  const msg = r.choices && r.choices[0] && r.choices[0].message;
+  if (msg && typeof msg.content === 'string' && msg.content) return msg.content;
+  return '';
 }
 
 // 来源判定：有 Origin 头按白名单校验；无 Origin 有 Referer 取源校验；均无则放行（curl 调试）
@@ -106,7 +119,15 @@ export async function onRequestOptions(request) {
 }
 
 export async function onRequestGet() {
-  return json({ ok: true, service: 'daoxuan-ai', ts: Date.now() }, 200, null);
+  return json({
+    ok: true,
+    service: 'daoxuan-ai',
+    models: {
+      qwen: PROVIDERS.qwen.label,
+      qwen2: PROVIDERS.qwen2.label,
+    },
+    ts: Date.now(),
+  }, 200, null);
 }
 
 export async function onRequestPost(context) {
@@ -136,56 +157,40 @@ async function handle(request, env) {
   }
 
   const modelKey = body.modelKey === 'qwen2' ? 'qwen2' : 'qwen';
+  const provider = PROVIDERS[modelKey];
   const systemPrompt = (body.systemPrompt || '').trim();
   const userPrompt = (body.userPrompt || '').trim();
   if (!systemPrompt || !userPrompt) {
     return json({ error: '缺少 systemPrompt 或 userPrompt' }, 400, request);
   }
 
-  const apiKey = modelKey === 'qwen2' ? env.QWEN2_API_KEY : env.QWEN_API_KEY;
-  if (!apiKey) {
-    return json({ error: '服务端未配置 ' + (modelKey === 'qwen2' ? 'QWEN2_API_KEY' : 'QWEN_API_KEY') + ' 环境变量' }, 500, request);
+  // 两个模型均走 Workers AI 绑定（env.AI.run）
+  if (!env.AI) {
+    return json({
+      error: '服务端未配置 Workers AI 绑定（变量名 AI）。请在 Cloudflare 控制台为 dxzsby 项目添加 Workers AI 绑定（设置 → 环境 → 绑定 → 添加 → Workers AI，变量名 AI），重新部署后生效。',
+    }, 500, request);
   }
 
-  const model = MODELS[modelKey];
-
-  try {
-    const upstream = await fetch(BASE_URL + '/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + apiKey
-      },
-      body: JSON.stringify({
-        model: model,
+  // 按模型要求构造输入：对话模型用 messages，文本模型用 prompt（system+user 合并）
+  const inputs = provider.input === 'prompt'
+    ? { prompt: systemPrompt + '\n\n' + userPrompt }
+    : {
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userPrompt }
+          { role: 'user', content: userPrompt },
         ],
-        temperature: 0.5,
-        max_tokens: 2048
-      })
-    });
+        // GLM-4.7-Flash 为推理模型；如想关闭思维链以省额度/提速，可取消下一行注释：
+        // chat_template_kwargs: { enable_thinking: false },
+      };
 
-    if (!upstream.ok) {
-      let message = '上游 HTTP ' + upstream.status;
-      try {
-        const err = await upstream.json();
-        if (err && err.error && err.error.message) message = err.error.message;
-      } catch (e) { /* 忽略非 JSON 响应 */ }
-      return json({ error: friendlyError(message, upstream.status) }, 502, request);
-    }
-
-    const data = await upstream.json();
-    const content = data && data.choices && data.choices[0] && data.choices[0].message
-      ? data.choices[0].message.content
-      : '';
+  try {
+    const result = await env.AI.run(provider.model, inputs);
+    const content = extractContent(result);
     if (!content) {
       return json({ error: '上游返回为空' }, 502, request);
     }
     return json({ content: content }, 200, request);
-
   } catch (e) {
-    return json({ error: '释卦服务异常：' + e.message }, 500, request);
+    return json({ error: 'Cloudflare Workers AI 调用失败：' + e.message }, 502, request);
   }
 }

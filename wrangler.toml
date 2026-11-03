@@ -1,0 +1,13 @@
+# Cloudflare Pages Functions 配置（wrangler.toml）
+# 作为 Pages 项目的 source of truth：声明 Workers AI 绑定，供 functions/api/ai.js 通过 env.AI 调用。
+# 两个模型（GLM-4.7-Flash / Llama-3.1-8B）均走此绑定，无需任何 API 密钥。
+
+name = "dxzsby"
+pages_build_output_dir = "."
+
+# 沿用现有兼容性日期，避免运行时行为变化
+compatibility_date = "2026-08-09"
+
+# Workers AI 绑定：变量名 AI，代码中通过 context.env.AI.run(...) 使用
+[ai]
+binding = "AI"
