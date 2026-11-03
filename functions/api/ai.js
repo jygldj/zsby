@@ -86,12 +86,18 @@ function json(body, status, request, extra) {
   return new Response(JSON.stringify(body), { status: status || 200, headers });
 }
 
-// 从 Workers AI 返回（{response} 或 {choices:[{message:{content}}]}）中统一抽取正文
+// 从 Workers AI 返回中统一抽取正文。Qwen3 在关闭思维链(enable_thinking:false)时，
+// 答案会被放到 message.reasoning / reasoning_content 字段，而 response/content 为 null，故做回退。
 function extractContent(r) {
   if (!r || typeof r !== 'object') return '';
   if (typeof r.response === 'string' && r.response) return r.response;
   const msg = r.choices && r.choices[0] && r.choices[0].message;
-  if (msg && typeof msg.content === 'string' && msg.content) return msg.content;
+  if (msg) {
+    if (typeof msg.content === 'string' && msg.content) return msg.content;
+    // Qwen3 关闭思维链后答案落在此字段
+    if (typeof msg.reasoning === 'string' && msg.reasoning) return msg.reasoning;
+    if (typeof msg.reasoning_content === 'string' && msg.reasoning_content) return msg.reasoning_content;
+  }
   return '';
 }
 
