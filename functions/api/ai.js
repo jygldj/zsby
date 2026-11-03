@@ -2,7 +2,7 @@
 // 前端 POST { modelKey, systemPrompt, userPrompt } 到 /api/ai，
 // 本函数通过 Workers AI 绑定（env.AI）调用大模型，返回解读文本；密钥永不进入前端。
 //
-// 请求体：{ "modelKey": "glm" | "glm2", "systemPrompt": "...", "userPrompt": "..." }
+// 请求体：{ "modelKey": "glm" | "glm2" | "glm3", "systemPrompt": "...", "userPrompt": "..." }
 // 返回：{ "content": "AI 解读文本" } 或 { "error": "错误说明" }
 //
 // 模型配置（2026-11-04 更新：主/次分属不同模型族，形成真冗余）
@@ -13,13 +13,13 @@
 //                        与 GLM 不同模型族 → 真冗余（GLM 故障/限流时仍可出卦）；中文强、128K 上下文、
 //                        Neuron 单价最低（约 4.6k 入 / 30.5k 出 per M），最省共享日额度；已关闭思维链直出。
 //                        注：免费档不再依赖 Llama（@cf/meta/llama-3.1-8b-instruct 会被 Pages 路由到已弃用 infire 别名层）。
-//   候选第三模型（待评测 / 待接入）：智谱 GLM-4.7-Flash（open.bigmodel.cn，model="glm-4.7-flash"）
+//   候选第三模型（已启用为 glm3）：智谱 GLM-4.7-Flash（open.bigmodel.cn；走 openai-compat 分支，永久免费、独立额度池，抗 Cloudflare 全站故障）
 //                        定位 = 跨平台备援：额度**独立于** Cloudflare（智谱自家永久免费、不限 Token、200K 上下文、~30 并发），
 //                              可抗 Cloudflare 全站故障 / 额度耗尽；与主力同模型（中文/半白话质量一致），但独立额度池。
 //                        优势：国内直连、无需 VPN/绑卡、OpenAI 兼容（choices[0].message.content，可直接复用 extractContent）；
 //                              永久免费最“宽松”，比已放弃的 Gemini（无账号/地区门槛）更省心。
 //                        （注：2026-11-04 原计划用 Google Gemini 2.5 Flash 作跨平台备援，因无 Google 账号/地区政策门槛放弃，改选智谱。）
-//                        ★ 后续将对 glm(GLM·Cloudflare) / glm2(Qwen3·Cloudflare) / 智谱 GLM(跨平台) 三方案释卦能力做横向评测，再决定是否接入为 glm3。
+//                        ★ 三模型（glm=GLM·Cloudflare / glm2=Qwen3·Cloudflare / glm3=智谱·跨平台）已就绪，待横向释卦评测对比中文/半白话质量。
 //
 // 环境变量 / 绑定（Cloudflare 控制台 → dxzsby 项目 → 设置 → 绑定，改后需重新部署生效）：
 //   AI            = Workers AI 绑定（设置 → 绑定 → 添加 → Workers AI，变量名填 AI）；两模型共用，无需密钥
@@ -82,16 +82,17 @@ const PROVIDERS = {
     extra: { chat_template_kwargs: { enable_thinking: false } },
     label: 'Qwen3-30B-A3B-FP8（Cloudflare Workers AI 免费档·备援，异模型冗余）',
   },
-  // —— 候选第三模型（跨平台备援，待评测 / 待接入，暂未启用）——
-  // glm3: {
-  //   kind: 'openai-compat',  // 走 OpenAI 兼容端点（非 Workers AI 绑定）；需新增该 kind 的调用分支
-  //   model: 'glm-4.7-flash',
-  //   baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',  // 智谱开放平台 OpenAI 兼容 Base URL
-  //   input: 'messages',
-  //   // 需 env.BIGMODEL_API_KEY（智谱 API Key）；返回结构 { choices:[{ message:{ content } }] } 与 OpenAI 一致，可直接复用 extractContent
-  //   // 价值：永久免费、不限 Token、200K 上下文、~30 并发；额度独立于 Cloudflare，抗其全站故障 / 额度耗尽
-  //   label: '智谱 GLM-4.7-Flash（跨平台备援·待评测，独立免费额度池）',
-  // },
+  // 候选第三模型（跨平台备援，已启用）：智谱 GLM-4.7-Flash（open.bigmodel.cn，OpenAI 兼容）
+  //   永久免费、不限 Token、200K 上下文、~30 并发；额度独立于 Cloudflare，抗其全站故障 / 额度耗尽
+  //   需环境变量 BIGMODEL_API_KEY（智谱 API Key）；返回 { choices:[{ message:{ content, reasoning_content } }] }，复用 extractContent
+  glm3: {
+    kind: 'openai-compat',  // 走 OpenAI 兼容端点（非 Workers AI 绑定）；调用分支见 handle()
+    model: 'glm-4.7-flash',
+    baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',  // 智谱开放平台 OpenAI 兼容 Base URL
+    input: 'messages',
+    temperature: 0.8,
+    label: '智谱 GLM-4.7-Flash（跨平台备援·独立免费额度池）',
+  },
 };
 
 function json(body, status, request, extra) {
@@ -161,6 +162,7 @@ export async function onRequestGet() {
     models: {
       glm: PROVIDERS.glm.label,
       glm2: PROVIDERS.glm2.label,
+      glm3: PROVIDERS.glm3.label,
     },
     ts: Date.now(),
   }, 200, null);
@@ -192,7 +194,7 @@ async function handle(request, env) {
     return json({ error: '请求体不是合法 JSON' }, 400, request);
   }
 
-  const modelKey = body.modelKey === 'glm2' ? 'glm2' : 'glm';
+  const modelKey = (body.modelKey === 'glm2' || body.modelKey === 'glm3') ? body.modelKey : 'glm';
   const provider = PROVIDERS[modelKey];
   const systemPrompt = (body.systemPrompt || '').trim();
   const userPrompt = (body.userPrompt || '').trim();
@@ -200,8 +202,8 @@ async function handle(request, env) {
     return json({ error: '缺少 systemPrompt 或 userPrompt' }, 400, request);
   }
 
-  // 两个模型均走 Workers AI 绑定（env.AI.run）
-  if (!env.AI) {
+  // 非跨平台备援（openai-compat）模型需 Workers AI 绑定（env.AI.run）；glm3 走智谱 API，无需 env.AI
+  if (provider.kind !== 'openai-compat' && !env.AI) {
     return json({
       error: '服务端未配置 Workers AI 绑定（变量名 AI）。请在 Cloudflare 控制台为 dxzsby 项目添加 Workers AI 绑定（设置 → 环境 → 绑定 → 添加 → Workers AI，变量名 AI），重新部署后生效。',
     }, 500, request);
@@ -223,13 +225,39 @@ async function handle(request, env) {
   if (provider.extra) Object.assign(inputs, provider.extra);
 
   try {
-    const result = await env.AI.run(provider.model, inputs);
+    let result;
+    if (provider.kind === 'openai-compat') {
+      // 跨平台备援：调智谱 OpenAI 兼容端点（非 Workers AI 绑定）
+      if (!env.BIGMODEL_API_KEY) {
+        return json({ error: '未配置智谱 API Key：请在 Cloudflare 控制台 → dxzsby 项目 → 设置 → 环境变量 → 添加 BIGMODEL_API_KEY（值为智谱开放平台 API Key），保存后重新部署生效。' }, 500, request);
+      }
+      const upstream = await fetch((provider.baseUrl || 'https://open.bigmodel.cn/api/paas/v4/') + 'chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + env.BIGMODEL_API_KEY,
+        },
+        body: JSON.stringify({
+          model: provider.model,
+          messages: inputs.messages,
+          temperature: provider.temperature != null ? provider.temperature : 0.8,
+        }),
+      });
+      if (!upstream.ok) {
+        const txt = await upstream.text().catch(() => '');
+        return json({ error: '智谱 API 调用失败(' + upstream.status + ')：' + txt.slice(0, 300) }, 502, request);
+      }
+      result = await upstream.json();
+    } else {
+      result = await env.AI.run(provider.model, inputs);
+    }
     const content = stripThinking(extractContent(result));
     if (!content) {
       return json({ error: '上游返回为空' }, 502, request);
     }
     return json({ content: content }, 200, request);
   } catch (e) {
-    return json({ error: 'Cloudflare Workers AI 调用失败：' + e.message }, 502, request);
+    const prefix = provider.kind === 'openai-compat' ? '智谱接口调用失败：' : 'Cloudflare Workers AI 调用失败：';
+    return json({ error: prefix + e.message }, 502, request);
   }
 }

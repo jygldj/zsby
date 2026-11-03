@@ -717,8 +717,9 @@
 
     <!-- 模型选择 -->
     <div class="model-selector">
-        <label><input type="radio" name="model" value="glm" checked> GLM-4.7-Flash（主）</label>
-        <label><input type="radio" name="model" value="glm2"> Qwen3-30B-A3B-FP8（备援）</label>
+        <label><input type="radio" name="model" value="glm" checked> GLM-4.7-Flash（主·Cloudflare）</label>
+        <label><input type="radio" name="model" value="glm2"> Qwen3-30B-A3B-FP8（备援·Cloudflare）</label>
+        <label><input type="radio" name="model" value="glm3"> 智谱 GLM-4.7-Flash（跨平台备援）</label>
     </div>
 
     <!-- 结果展示 -->
@@ -1190,7 +1191,7 @@
                 <div class="loading-text">
                     <div class="spinner">☯</div>
                     <div style="margin-top:10px;">正在为您解读卦象，大约需要一分钟...</div>
-                    <div style="font-size:13px;color:#9a8876;margin-top:4px;">模型：${model === 'glm' ? 'GLM-4.7-Flash（主）' : 'Qwen3-30B-A3B-FP8（备援）'}</div>
+                    <div style="font-size:13px;color:#9a8876;margin-top:4px;">模型：${model === 'glm' ? 'GLM-4.7-Flash（主·Cloudflare）' : (model === 'glm2' ? 'Qwen3-30B-A3B-FP8（备援·Cloudflare）' : '智谱 GLM-4.7-Flash（跨平台备援）')}</div>
                 </div>
             `;
             jieGuaBtn.disabled = true;
@@ -1383,10 +1384,16 @@
                     result = await callGlm(guaInfo, model);
                 } catch (err) {
                     const retryable = /额度|quota|欠费|arrear|throttl|rate.?limit|限流|429|free tier|free quota/i.test(err.message || '');
-                    if (retryable && model === 'glm') {
-                        console.warn('主模型额度受限，自动切换备选模型重试:', err.message);
-                        result = await callGlm(guaInfo, 'glm2');
-                        usedModel = 'glm2';
+                    if (retryable) {
+                        // 三级 fallback：glm → glm2 → glm3（跨平台独立额度池）
+                        const next = model === 'glm' ? 'glm2' : (model === 'glm2' ? 'glm3' : null);
+                        if (next) {
+                            console.warn('模型 ' + model + ' 额度受限，自动切换 ' + next + ' 重试:', err.message);
+                            result = await callGlm(guaInfo, next);
+                            usedModel = next;
+                        } else {
+                            throw err;
+                        }
                     } else {
                         throw err;
                     }
@@ -1409,7 +1416,7 @@
                 }
                 const userText = escapeHtml(`姓名：${userInfo.name || '匿名'}　性别：${userInfo.gender || '未知'}　出生时辰：${userInfo.birth || '未知'}`);
                 const questionText = escapeHtml(userInfo.question || '未提供具体问题，请综合解读');
-                const modelName = usedModel === 'glm' ? 'GLM-4.7-Flash（主）' : 'Qwen3-30B-A3B-FP8（备援）';
+                const modelName = usedModel === 'glm' ? 'GLM-4.7-Flash（主·Cloudflare）' : (usedModel === 'glm2' ? 'Qwen3-30B-A3B-FP8（备援·Cloudflare）' : '智谱 GLM-4.7-Flash（跨平台备援）');
 
                 // 首句校正：无论 AI 返回何种前缀（含偶发"野鹤老人曰"套语），一律强制以固定首句开头
                 const expectedOpen = (typeof buildFixedOpening === 'function')
