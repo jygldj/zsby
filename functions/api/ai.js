@@ -13,6 +13,11 @@
 //                        与 GLM 不同模型族 → 真冗余（GLM 故障/限流时仍可出卦）；中文强、128K 上下文、
 //                        Neuron 单价最低（约 4.6k 入 / 30.5k 出 per M），最省共享日额度；已关闭思维链直出。
 //                        注：免费档不再依赖 Llama（@cf/meta/llama-3.1-8b-instruct 会被 Pages 路由到已弃用 infire 别名层）。
+//   候选第三模型（待评测 / 待接入）：Google Gemini 2.5 Flash（gemini-2.5-flash）
+//                        定位 = 跨平台备援：免费层额度**独立于** Cloudflare（每天上千次请求级、~100 万 token/天），
+//                              可抗 Cloudflare 全站故障 / 额度耗尽；1M 上下文；浅文言 / 半白话文风好（古文互译实测满分）。
+//                        短板：纯文本逻辑推理偏弱、冷门易学知识易幻觉；需 Gemini API Key + 独立调用代码（非 Workers AI 绑定）。
+//                        ★ 后续将对 glm(GLM) / glm2(Qwen3) / Gemini 三模型释卦能力做横向评测，再决定是否接入为 glm3。
 //
 // 环境变量 / 绑定（Cloudflare 控制台 → dxzsby 项目 → 设置 → 绑定，改后需重新部署生效）：
 //   AI            = Workers AI 绑定（设置 → 绑定 → 添加 → Workers AI，变量名填 AI）；两模型共用，无需密钥
@@ -54,8 +59,8 @@ const ALLOWED_ORIGINS = [
 ];
 
 // 模型提供方配置：只改这里即可切换模型，前端无需变动
-//   kind 固定为 'cf-ai'（Workers AI 绑定）
-//   input = 'messages' → 传入 { messages:[{role,content}] }（GLM 等对话模型）
+//   kind = 'cf-ai'（Workers AI 绑定，当前 glm / glm2 均用此）；候选第三模型计划用 'gemini'（见 glm3 注释）
+//   input = 'messages' → 传入 { messages:[{role,content}] }（GLM / Qwen3 / Gemini 等对话模型）
 //   input = 'prompt'   → 传入 { prompt: "..." }（Llama 等文本模型，需把 system+user 合并为一段）
 const PROVIDERS = {
   // 主模型：Cloudflare Workers AI 免费档 GLM-4.7-Flash（中文/半白话理解最强）
@@ -75,6 +80,14 @@ const PROVIDERS = {
     extra: { chat_template_kwargs: { enable_thinking: false } },
     label: 'Qwen3-30B-A3B-FP8（Cloudflare Workers AI 免费档·备援，异模型冗余）',
   },
+  // —— 候选第三模型（待评测 / 待接入，暂未启用）——
+  // glm3: {
+  //   kind: 'gemini',  // 需新增调用分支（Google Generative Language API 或 OpenAI 兼容端点），非 Workers AI 绑定
+  //   model: 'gemini-2.5-flash',
+  //   input: 'messages',
+  //   // 需 env.GEMINI_API_KEY；返回结构为 { candidates:[{ content:{ parts:[{text}] } }] }，需另写抽取逻辑（与 extractContent 不同）
+  //   label: 'Gemini 2.5 Flash（跨平台备援·待评测，独立免费额度池）',
+  // },
 };
 
 function json(body, status, request, extra) {
