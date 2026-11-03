@@ -9,9 +9,10 @@
 //   两个模型均走 Workers AI 绑定 env.AI.run()，每天共 1 万 Neurons 免费，无需任何 API 密钥。
 //   modelKey = "qwen"  → 主模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
 //                        中文（含半白话/文言）理解最强，推理模型；免费档中文主力。
-//   modelKey = "qwen2" → 次模型：Llama-3.1-8B（@cf/meta/llama-3.1-8b-instruct）
-//                        免费档中除 GLM 外中文半白话理解可用之选，作为主模型冗余备援。
-//                        注：Llama 文本模型走 prompt 字段（非 messages），代码已按 input 格式区分。
+//   modelKey = "qwen2" → 次模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
+//                        免费档中唯一强中文（半白话/文言）可用模型；与主模型同用 GLM 以保证 100% 可用与解读质量。
+//                        注：Cloudflare Pages 运行时会将 @cf/meta/llama-3.1-8b-instruct 路由到已弃用的 infire 别名层，
+//                            故免费档不再依赖 Llama；如需模型级冗余，可在 Workers AI 开启付费后改为 Qwen2.5 / Llama-3.3 等。
 //
 // 环境变量 / 绑定（Cloudflare 控制台 → dxzsby 项目 → 设置 → 绑定，改后需重新部署生效）：
 //   AI            = Workers AI 绑定（设置 → 绑定 → 添加 → Workers AI，变量名填 AI）；两模型共用，无需密钥
@@ -64,12 +65,12 @@ const PROVIDERS = {
     input: 'messages',
     label: 'GLM-4.7-Flash（Cloudflare Workers AI 免费档·主）',
   },
-  // 次模型：Cloudflare Workers AI 免费档 Llama-3.1-8B（中文半白话备援）
+  // 次模型：Cloudflare Workers AI 免费档 GLM-4.7-Flash（与主模型同模型，保证可用性与中文半白话质量）
   qwen2: {
     kind: 'cf-ai',
-    model: '@cf/meta/llama-3.1-8b-instruct',
-    input: 'prompt',
-    label: 'Llama-3.1-8B（Cloudflare Workers AI 免费档·备援）',
+    model: '@cf/zai-org/glm-4.7-flash',
+    input: 'messages',
+    label: 'GLM-4.7-Flash（Cloudflare Workers AI 免费档·备援，同主模型）',
   },
 };
 
