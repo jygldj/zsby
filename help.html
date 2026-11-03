@@ -205,7 +205,7 @@
         <h3>🧠 第三步：AI释卦</h3>
         <p>点击 <strong>「释卦」</strong> 按钮，AI将以《增删卜易》理论为您解读。</p>
         <ul>
-            <li>支持 <strong>GLM-4.7-Flash（主）</strong>与 <strong>GLM-4.7-Flash（备援）</strong> 两种模型，均走 Cloudflare Workers AI 免费档</li>
+            <li>支持 <strong>GLM-4.7-Flash（主）</strong>与 <strong>Qwen3-30B-A3B-FP8（备援）</strong> 两种模型，均走 Cloudflare Workers AI 免费档</li>
             <li>建议在起卦页面 <strong>填写所问之事</strong>，帮助AI精准分析</li>
             <li>AI会分析用神、世应、五行生克，给出结论</li>
         </ul>
@@ -248,7 +248,7 @@
 
     <div class="help-section">
         <h3>⚙️ 配置说明</h3>
-        <p>AI 解卦由 Cloudflare Workers AI 免费档（<strong>GLM-4.7-Flash</strong>）提供，密钥不落地前端。若站长需要调整模型：</p>
+        <p>AI 解卦由 Cloudflare Workers AI 免费档提供，主力 <strong>GLM-4.7-Flash</strong>、备援 <strong>Qwen3-30B-A3B-FP8</strong>，密钥不落地前端。若站长需要调整模型：</p>
         <ul>
             <li>主/备援模型均在后端 <code>functions/api/ai.js</code> 的 <code>PROVIDERS</code> 中配置，改模型名后重新部署生效</li>
             <li>需在 Cloudflare 控制台 → Pages 项目 → Settings → 绑定 中接入 <strong>Workers AI 绑定</strong>（变量名 <code>AI</code>），无需任何第三方 API Key</li>
