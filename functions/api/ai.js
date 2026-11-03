@@ -5,14 +5,14 @@
 // 请求体：{ "modelKey": "glm" | "glm2", "systemPrompt": "...", "userPrompt": "..." }
 // 返回：{ "content": "AI 解读文本" } 或 { "error": "错误说明" }
 //
-// 模型配置（2026-11-03 更新：原两个 Qwen 免费额度已用尽，统一换成 Cloudflare Workers AI 免费档）
-//   两个模型均走 Workers AI 绑定 env.AI.run()，每天共 1 万 Neurons 免费，无需任何 API 密钥。
+// 模型配置（2026-11-04 更新：主/次分属不同模型族，形成真冗余）
+//   两模型均走 Workers AI 绑定 env.AI.run()，每天共 1 万 Neurons 免费，无需任何 API 密钥。
 //   modelKey = "glm"   → 主模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
 //                        中文（含半白话/文言）理解最强，推理模型；免费档中文主力。
-//   modelKey = "glm2"  → 次模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
-//                        免费档中唯一强中文（半白话/文言）可用模型；与主模型同用 GLM 以保证 100% 可用与解读质量。
-//                        注：Cloudflare Pages 运行时会将 @cf/meta/llama-3.1-8b-instruct 路由到已弃用的 infire 别名层，
-//                            故免费档不再依赖 Llama；如需模型级冗余，可在 Workers AI 开启付费后改用其他付费模型（如 Llama-3.3 等）。
+//   modelKey = "glm2"  → 次模型（备援）：Qwen3-30B-A3B-FP8（@cf/qwen/qwen3-30b-a3b-fp8）
+//                        与 GLM 不同模型族 → 真冗余（GLM 故障/限流时仍可出卦）；中文强、128K 上下文、
+//                        Neuron 单价最低（约 4.6k 入 / 30.5k 出 per M），最省共享日额度；已关闭思维链直出。
+//                        注：免费档不再依赖 Llama（@cf/meta/llama-3.1-8b-instruct 会被 Pages 路由到已弃用 infire 别名层）。
 //
 // 环境变量 / 绑定（Cloudflare 控制台 → dxzsby 项目 → 设置 → 绑定，改后需重新部署生效）：
 //   AI            = Workers AI 绑定（设置 → 绑定 → 添加 → Workers AI，变量名填 AI）；两模型共用，无需密钥
@@ -65,12 +65,15 @@ const PROVIDERS = {
     input: 'messages',
     label: 'GLM-4.7-Flash（Cloudflare Workers AI 免费档·主）',
   },
-  // 次模型：Cloudflare Workers AI 免费档 GLM-4.7-Flash（与主模型同模型，保证可用性与中文半白话质量）
+  // 次模型（备援）：Cloudflare Workers AI 免费档 Qwen3-30B-A3B-FP8（与 GLM 不同模型族 → 真冗余）
+  //   中文（半白话/文言）理解强、128K 上下文、Neuron 单价最低（约 4.6k 入 / 30.5k 出 per M），最省共享日额度；
+  //   关闭思维链（enable_thinking:false）以贴合「通俗断语 + 专业详解」的直出格式、并省额度。
   glm2: {
     kind: 'cf-ai',
-    model: '@cf/zai-org/glm-4.7-flash',
+    model: '@cf/qwen/qwen3-30b-a3b-fp8',
     input: 'messages',
-    label: 'GLM-4.7-Flash（Cloudflare Workers AI 免费档·备援，同主模型）',
+    extra: { chat_template_kwargs: { enable_thinking: false } },
+    label: 'Qwen3-30B-A3B-FP8（Cloudflare Workers AI 免费档·备援，异模型冗余）',
   },
 };
 
@@ -90,6 +93,15 @@ function extractContent(r) {
   const msg = r.choices && r.choices[0] && r.choices[0].message;
   if (msg && typeof msg.content === 'string' && msg.content) return msg.content;
   return '';
+}
+
+// 兜底：剔除模型可能夹带的 <think>…</think> 思维链（Qwen3 已关闭思考，GLM 一般不返回，此处双保险）
+function stripThinking(text) {
+  if (typeof text !== 'string' || !text) return text;
+  return text
+    .replace(/<think>[\s\S]*?<\/think>/gi, '')
+    .replace(/<think>[\s\S]*$/gi, '')
+    .trim();
 }
 
 // 来源判定：有 Origin 头按白名单校验；无 Origin 有 Referer 取源校验；均无则放行（curl 调试）
@@ -184,9 +196,12 @@ async function handle(request, env) {
         // chat_template_kwargs: { enable_thinking: false },
       };
 
+  // 模型级附加参数（如关闭思维链）；不影响主模型 GLM
+  if (provider.extra) Object.assign(inputs, provider.extra);
+
   try {
     const result = await env.AI.run(provider.model, inputs);
-    const content = extractContent(result);
+    const content = stripThinking(extractContent(result));
     if (!content) {
       return json({ error: '上游返回为空' }, 502, request);
     }
