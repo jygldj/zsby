@@ -49,7 +49,7 @@
 - 同卦 + 同日辰 + 同月建命中时，释卦页弹「📜 原案例对照」卡，展示野鹤原断语与用神取法。
 
 ### 8. AI 释卦
-- 双模型（千问旗舰 `qwen-max` 默认主力 / 千问备选 `qwen3.7-flash`），密钥存服务端环境变量，经 Cloudflare Functions 代理调用。
+- 双模型（GLM-4.7-Flash 主 / GLM-4.7-Flash 备援），均走 Cloudflare Workers AI 免费档（`@cf/zai-org/glm-4.7-flash`），经 `functions/api/ai.js` 代理调用，无需任何第三方 API Key。
 - **数据增强**：卦象（六冲六合/墓绝/进退/反伏/独发/三合三刑）、断卦链、应期裁决、门类知识全要素结构化并入提示词——**AI 只解读、不自行推演**。
 - 输出固定首句 + 通俗断语 + 「专业详解」折叠；附断卦依据链 / 应期推导 / 原案例对照面板。
 - **提示词与输出 XSS 加固**：用户输入经 HTML 转义后入 DOM，AI 文本先转义再渲染。
@@ -88,7 +88,7 @@ zsby/                                # 仓库根（Cloudflare Pages 项目根）
 │   ├── zhukong.js       # 【主控层】摇卦/排盘/渲染/事件/手动输卦
 │   └── yangshi.css      # 【样式层】古风排版、爻象绘制、响应式
 ├── api/
-│   └── qwen.js          # 通义千问调用模块（双模型，密钥在服务端）
+│   └── glm.js           # GLM-4.7-Flash 调用模块（双模型，走 Workers AI 绑定，无密钥）
 └── functions/
     └── api/
         └── ai.js        # AI 释卦代理（Cloudflare Pages 后端）
@@ -119,17 +119,17 @@ zsby/                                # 仓库根（Cloudflare Pages 项目根）
 
 ## 五、模型说明
 
-| 模型 | 服务端环境变量 | 实际模型名 | 页面标注 | 角色 |
+| 模型 | 后端绑定 | 实际模型名 | 页面标注 | 角色 |
 |---|---|---|---|---|
-| 千问旗舰 | `QWEN_API_KEY` | `qwen-max` | 千问旗舰 | 默认主力 |
-| 千问备选 | `QWEN2_API_KEY` | `qwen3.7-flash` | 千问备选 | 备选 |
+| GLM-4.7-Flash（主） | Workers AI 绑定 `AI` | `@cf/zai-org/glm-4.7-flash` | GLM-4.7-Flash（主） | 默认主力 |
+| GLM-4.7-Flash（备援） | Workers AI 绑定 `AI` | `@cf/zai-org/glm-4.7-flash` | GLM-4.7-Flash（备援） | 备援 |
 
-两模型提示词完全一致，解读风格与准确性统一。密钥存于 Cloudflare Pages 环境变量，前端经 `functions/api/ai.js` 代理调用，密钥永不进入前端代码。
+两模型提示词完全一致，解读风格与准确性统一。模型均经 Cloudflare Workers AI 免费档（`functions/api/ai.js` 代理）调用，无需任何第三方 API Key，密钥永不进入前端代码。
 
 ## 六、依赖与存储
 
 - `lunar.js`：农历/干支/节气/旬空计算库（完整 lunar-javascript 内嵌于 `ly/`）。
-- API 密钥：`QWEN_API_KEY` / `QWEN2_API_KEY`（Cloudflare Pages 环境变量）。
+- 数据/模型依赖：`functions/api/ai.js` 依赖 Cloudflare Pages 的 **Workers AI 绑定 `AI`**（免费档 GLM-4.7-Flash），无需第三方 API Key。
 - 数据存储：`localStorage`（`currentGua`、`userInfo`、`guaHistory`），仅本地浏览器。
 
 ## 七、技术约束（不可改动）
@@ -137,7 +137,7 @@ zsby/                                # 仓库根（Cloudflare Pages 项目根）
 - `ly/suanfa.js` 排盘核心算法与断卦引擎（六亲实时计算、六神、伏神三式、变卦、断卦链、应期引擎、原案库）。
 - `ly/zhukong.js` 主控流程（`completeAndDisplay`、`renderFinalResult`、`buildGuaHtml`）。
 - `ly/lunar.js` 时间计算核心逻辑。
-- `api/qwen.js` 的调用结构、`systemPrompt` 断卦口吻与断卦铁律。
+- `api/glm.js` 的调用结构、`systemPrompt` 断卦口吻与断卦铁律。
 - **时间体系口径**：晚子时换日（`getDayInGanZhiExact`）、月建按时分（`getMonthZhiExact`），全站统一，不可回退普通版。
 
 ---

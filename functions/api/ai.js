@@ -2,17 +2,17 @@
 // 前端 POST { modelKey, systemPrompt, userPrompt } 到 /api/ai，
 // 本函数通过 Workers AI 绑定（env.AI）调用大模型，返回解读文本；密钥永不进入前端。
 //
-// 请求体：{ "modelKey": "qwen" | "qwen2", "systemPrompt": "...", "userPrompt": "..." }
+// 请求体：{ "modelKey": "glm" | "glm2", "systemPrompt": "...", "userPrompt": "..." }
 // 返回：{ "content": "AI 解读文本" } 或 { "error": "错误说明" }
 //
 // 模型配置（2026-11-03 更新：原两个 Qwen 免费额度已用尽，统一换成 Cloudflare Workers AI 免费档）
 //   两个模型均走 Workers AI 绑定 env.AI.run()，每天共 1 万 Neurons 免费，无需任何 API 密钥。
-//   modelKey = "qwen"  → 主模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
+//   modelKey = "glm"   → 主模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
 //                        中文（含半白话/文言）理解最强，推理模型；免费档中文主力。
-//   modelKey = "qwen2" → 次模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
+//   modelKey = "glm2"  → 次模型：GLM-4.7-Flash（@cf/zai-org/glm-4.7-flash）
 //                        免费档中唯一强中文（半白话/文言）可用模型；与主模型同用 GLM 以保证 100% 可用与解读质量。
 //                        注：Cloudflare Pages 运行时会将 @cf/meta/llama-3.1-8b-instruct 路由到已弃用的 infire 别名层，
-//                            故免费档不再依赖 Llama；如需模型级冗余，可在 Workers AI 开启付费后改为 Qwen2.5 / Llama-3.3 等。
+//                            故免费档不再依赖 Llama；如需模型级冗余，可在 Workers AI 开启付费后改用其他付费模型（如 Llama-3.3 等）。
 //
 // 环境变量 / 绑定（Cloudflare 控制台 → dxzsby 项目 → 设置 → 绑定，改后需重新部署生效）：
 //   AI            = Workers AI 绑定（设置 → 绑定 → 添加 → Workers AI，变量名填 AI）；两模型共用，无需密钥
@@ -59,14 +59,14 @@ const ALLOWED_ORIGINS = [
 //   input = 'prompt'   → 传入 { prompt: "..." }（Llama 等文本模型，需把 system+user 合并为一段）
 const PROVIDERS = {
   // 主模型：Cloudflare Workers AI 免费档 GLM-4.7-Flash（中文/半白话理解最强）
-  qwen: {
+  glm: {
     kind: 'cf-ai',
     model: '@cf/zai-org/glm-4.7-flash',
     input: 'messages',
     label: 'GLM-4.7-Flash（Cloudflare Workers AI 免费档·主）',
   },
   // 次模型：Cloudflare Workers AI 免费档 GLM-4.7-Flash（与主模型同模型，保证可用性与中文半白话质量）
-  qwen2: {
+  glm2: {
     kind: 'cf-ai',
     model: '@cf/zai-org/glm-4.7-flash',
     input: 'messages',
@@ -124,8 +124,8 @@ export async function onRequestGet() {
     ok: true,
     service: 'daoxuan-ai',
     models: {
-      qwen: PROVIDERS.qwen.label,
-      qwen2: PROVIDERS.qwen2.label,
+      glm: PROVIDERS.glm.label,
+      glm2: PROVIDERS.glm2.label,
     },
     ts: Date.now(),
   }, 200, null);
@@ -157,7 +157,7 @@ async function handle(request, env) {
     return json({ error: '请求体不是合法 JSON' }, 400, request);
   }
 
-  const modelKey = body.modelKey === 'qwen2' ? 'qwen2' : 'qwen';
+  const modelKey = body.modelKey === 'glm2' ? 'glm2' : 'glm';
   const provider = PROVIDERS[modelKey];
   const systemPrompt = (body.systemPrompt || '').trim();
   const userPrompt = (body.userPrompt || '').trim();

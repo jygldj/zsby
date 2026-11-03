@@ -1,17 +1,17 @@
 // ============================================================
-// 千问（通义千问）API 调用模块
+// GLM-4.7-Flash（Cloudflare Workers AI）API 调用模块
 // rw10 精炼版：锁死首句、取消段落标题、只留通俗断语 + 专业详解
 // ============================================================
 
-// 支持双模型：callQwen(guaInfo, 'qwen') 主力；callQwen(guaInfo, 'qwen2') 备选
-// 密钥已移入服务端（functions/api/ai.js 代理），本文件不再包含任何密钥
+// 支持双模型：callGlm(guaInfo, 'glm') 主模型；callGlm(guaInfo, 'glm2') 备援模型
+// 两模型均走服务端 functions/api/ai.js 代理（Cloudflare Workers AI 免费档），本文件不含任何密钥
 
 // D-1 收敛：首句模板单源（前端 jiegua.html 的 expectedOpen 亦复用，消除与首句定义的重复漂移）
 function buildFixedOpening(question, benGua, bianGua) {
     return `君有疑惑，询问${question || '此事'}，求得《${benGua}》之《${bianGua}》，今老夫为你释疑：`;
 }
 
-async function callQwen(guaInfo, modelKey) {
+async function callGlm(guaInfo, modelKey) {
 
     const userInfo = {
         name: guaInfo.userName || '',
@@ -197,7 +197,7 @@ ${yingqiText}
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                modelKey: modelKey || 'qwen',
+                modelKey: modelKey || 'glm',
                 systemPrompt: systemPrompt,
                 userPrompt: userPrompt
             })
