@@ -13,7 +13,7 @@
 //                        与 GLM 不同模型族 → 真冗余（GLM 故障/限流时仍可出卦）；中文强、128K 上下文、
 //                        Neuron 单价最低（约 4.6k 入 / 30.5k 出 per M），最省共享日额度；已关闭思维链直出。
 //                        注：免费档不再依赖 Llama（@cf/meta/llama-3.1-8b-instruct 会被 Pages 路由到已弃用 infire 别名层）。
-//   候选第三模型（已启用为 glm3）：智谱 GLM-4.7-Flash（open.bigmodel.cn；走 openai-compat 分支，永久免费、独立额度池，抗 Cloudflare 全站故障）
+//   候选第三模型（已启用为 glm3）：智谱 GLM-4-Flash（open.bigmodel.cn；走 openai-compat 分支，永久免费、独立额度池，抗 Cloudflare 全站故障）
 //                        定位 = 跨平台备援：额度**独立于** Cloudflare（智谱自家永久免费、不限 Token、200K 上下文、~30 并发），
 //                              可抗 Cloudflare 全站故障 / 额度耗尽；与主力同模型（中文/半白话质量一致），但独立额度池。
 //                        优势：国内直连、无需 VPN/绑卡、OpenAI 兼容（choices[0].message.content，可直接复用 extractContent）；
@@ -87,11 +87,11 @@ const PROVIDERS = {
   //   需环境变量 BIGMODEL_API_KEY（智谱 API Key）；返回 { choices:[{ message:{ content, reasoning_content } }] }，复用 extractContent
   glm3: {
     kind: 'openai-compat',  // 走 OpenAI 兼容端点（非 Workers AI 绑定）；调用分支见 handle()
-    model: 'glm-4.7-flash',
+    model: 'glm-4-flash',
     baseUrl: 'https://open.bigmodel.cn/api/paas/v4/',  // 智谱开放平台 OpenAI 兼容 Base URL
     input: 'messages',
     temperature: 0.8,
-    label: '智谱 GLM-4.7-Flash（跨平台备援·独立免费额度池）',
+    label: '智谱 GLM-4-Flash（跨平台备援·独立免费额度池）',
   },
 };
 
